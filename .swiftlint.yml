@@ -1,0 +1,236 @@
+# SwiftLint configuration for SmartHomeAppIOS.
+# Run with `swiftlint` from the repo root. Install via `brew install swiftlint`.
+#
+# Philosophy: turn on every opt-in rule that enforces the official Swift API
+# Design Guidelines (https://swift.org/documentation/api-design-guidelines/) or
+# widely-accepted idiomatic Swift / SwiftUI patterns. Skip rules that are
+# project-style opinions (file headers, mandatory ACL, etc.) or that target
+# frameworks this project doesn't use (Nimble, Quick, Interface Builder).
+
+included:
+  - SmartHomeAppIOS
+  - SmartHomeAppIOSTests
+  - SmartHomeAppIOSUITests
+
+excluded:
+  - build
+  - DerivedData
+  - .build
+  - .swiftpm
+  - Pods
+  - Carthage
+  - "**/*.generated.swift"
+
+opt_in_rules:
+  # --- API Design Guidelines: clarity & idiom ---------------------------------
+  - anyobject_protocol                       # Use `AnyObject`, not `class`, in protocol inheritance
+  - array_init                               # `Array(seq)` over `seq.map { $0 }`
+  - balanced_xctest_lifecycle                # `setUp`/`tearDown` come in pairs
+  - closure_body_length                      # Closures shouldn't grow unbounded
+  - closure_end_indentation                  # Closing brace aligns with opening line
+  - closure_spacing                          # `{ x in ... }` with spaces inside braces
+  - collection_alignment                     # Multi-line collection literals align elements
+  - comma_inheritance                        # Consistent spacing in inheritance lists
+  - contains_over_filter_count               # `contains(where:)` over `filter { }.count > 0`
+  - contains_over_filter_is_empty            # `contains(where:)` over `filter { }.isEmpty`
+  - contains_over_first_not_nil              # `contains(where:)` over `first(where:) != nil`
+  - contains_over_range_nil_comparison       # `contains` over `range(of:) != nil`
+  - convenience_type                         # Static-only types should be caseless enums
+  - direct_return                            # `return foo` after computing — collapse
+  - discarded_notification_center_observer   # `addObserver` return value must be kept
+  - discouraged_assert                       # Prefer `assertionFailure` over `assert(false)`
+  - discouraged_none_name                    # Avoid `case none` in enums (collides with Optional.none)
+  - discouraged_object_literal               # Prefer initializers over `#colorLiteral`/`#imageLiteral`
+  - discouraged_optional_boolean             # `Bool?` is almost always a code smell
+  - discouraged_optional_collection          # Empty collection beats `nil` collection
+  - empty_collection_literal                 # `arr == []` → `arr.isEmpty`
+  - empty_count                              # `.count == 0` → `.isEmpty`
+  - empty_string                             # `s == ""` → `s.isEmpty`
+  - empty_xctest_method                      # Empty `setUp`/`tearDown` should be removed
+  - enum_case_associated_values_count        # Cases shouldn't have too many associated values
+  - explicit_init                            # `.init(...)` only when needed
+  - extension_access_modifier                # Put access modifier on the extension, not each member
+  - fallthrough                              # Avoid implicit fallthrough — be explicit
+  - fatal_error_message                      # `fatalError(...)` must have a message
+  - file_name_no_space                       # File names shouldn't contain spaces
+  - final_test_case                          # Test classes should be `final`
+  - first_where                              # `first(where:)` over `filter { }.first`
+  - flatmap_over_map_reduce                  # `flatMap` over `map(...).reduce([], +)`
+  - force_unwrapping                         # No `!` outside compile-time constants
+  - function_default_parameter_at_end        # Defaults belong at the end of the parameter list
+  - identical_operands                       # `x == x` is a bug
+  - implicitly_unwrapped_optional            # No `Foo!` types
+  - joined_default_parameter                 # `.joined()` not `.joined(separator: "")`
+  - last_where                               # `last(where:)` over `filter { }.last`
+  - legacy_multiple                          # `n.isMultiple(of:)` over `n % m == 0`
+  - legacy_objc_type                         # `String`/`Date`/`URL` over `NSString`/`NSDate`/`NSURL`
+  - legacy_random                            # `Int.random(in:)` over `arc4random_uniform`
+  - literal_expression_end_indentation       # Multi-line literals indent consistently
+  - local_doc_comment                        # `///` only on declarations, not local code
+  - lower_acl_than_parent                    # Don't expose a member more broadly than its container
+  - modifier_order                           # Consistent modifier ordering (`public final override`)
+  - multiline_arguments                      # Multi-line call: one argument per line
+  - multiline_function_chains                # Long fluent chains broken consistently
+  - multiline_literal_brackets               # `[...]` brackets on their own lines when multi-line
+  - multiline_parameters                     # Multi-line declaration: one parameter per line
+  - non_overridable_class_declaration        # `class func` that can't be overridden → `static`
+  - nslocalizedstring_key                    # `NSLocalizedString` keys must be literals
+  - operator_usage_whitespace                # `a + b`, not `a+b`
+  - optional_enum_case_matching              # `case .some` over `case .some?`
+  - overridden_super_call                    # `super` must be called in known lifecycle methods
+  - override_in_extension                    # Don't override in extensions
+  - pattern_matching_keywords                # `case let .foo(a, b)` over `case .foo(let a, let b)`
+  - period_spacing                           # `a.b` not `a . b`
+  - prefer_self_in_static_references         # `Self.foo` over `TypeName.foo` inside the type
+  - prefer_self_type_over_type_of_self       # `Self` over `type(of: self)`
+  - prefer_zero_over_explicit_init           # `CGPoint.zero` over `CGPoint(x: 0, y: 0)`
+  - private_action                           # `@IBAction` methods should be `private`
+  - private_outlet                           # `@IBOutlet` properties should be `private`
+  - private_subject                          # `PassthroughSubject` properties should be private
+  - private_swiftui_state                    # `@State` properties should be `private` (Apple's own guidance)
+  - prohibited_super_call                    # Some lifecycle methods must NOT call `super`
+  - raw_value_for_camel_cased_codable_enum   # Codable enums should have explicit `rawValue`s
+  - reduce_into                              # `reduce(into:)` over `reduce(...)` for collections
+  - redundant_nil_coalescing                 # `x ?? nil` is redundant
+  - redundant_self_in_closure                # Only `self.` in closures when actually needed
+  - redundant_type_annotation                # `let s: String = "x"` → `let s = "x"`
+  - return_value_from_void_function          # Don't `return foo()` from a Void function
+  - self_binding                             # `guard let self` (shorthand) over `guard let self = self`
+  - shorthand_optional_binding               # `if let foo` over `if let foo = foo`
+  - single_test_class                        # One XCTestCase subclass per file
+  - sorted_first_last                        # `min()`/`max()` over `sorted().first/last`
+  - static_operator                          # Operators must be `static` on the type
+  - strong_iboutlet                          # `@IBOutlet` shouldn't be `weak` unless intentional
+  - superfluous_else                         # Drop `else` after `return`/`throw`
+  - test_case_accessibility                  # Test members shouldn't be `public`
+  - toggle_bool                              # `b.toggle()` over `b = !b`
+  - unavailable_function                     # Unimplemented functions should be `@available(*, unavailable)`
+  - unhandled_throwing_task                  # `Task` with throwing body must handle the error
+  - unneeded_parentheses_in_closure_argument # `{ x in ... }` over `{ (x) in ... }`
+  - unowned_variable_capture                 # Be explicit about `[unowned self]` risks
+  - untyped_error_in_catch                   # `catch let error as SomeError` over bare `catch`
+  - unused_capture_list                      # Drop empty `[]` capture lists
+  - unused_import                            # Remove unused `import`s
+  - unused_parameter                         # Replace unused params with `_`
+  - vertical_parameter_alignment_on_call     # Align continuation args under the first arg
+  - vertical_whitespace_between_cases        # Blank line between non-trivial cases
+  - vertical_whitespace_closing_braces       # No blank line before closing brace
+  - vertical_whitespace_opening_braces       # No blank line after opening brace
+  - weak_delegate                            # Delegate properties should be `weak`
+  - xct_specific_matcher                     # `XCTAssertEqual` over `XCTAssertTrue(a == b)`
+  - yoda_condition                           # `if x == 5`, not `if 5 == x`
+
+disabled_rules:
+  - todo                                     # TODOs are fine during development
+  - trailing_comma                           # Xcode auto-formatting fights this; leave to taste
+  - multiple_closures_with_trailing_closure  # SwiftUI builders trip this constantly
+  - opening_brace                            # SwiftUI result builders break this
+
+# --- Rules deliberately NOT enabled (and why) ---------------------------------
+#
+# These are SwiftLint opt-in rules that are project-style opinions rather than
+# Swift-guideline enforcement, so we leave them off:
+#
+#   attributes                         # Forces specific placement of @attributes
+#   anonymous_argument_in_multiline_closure  # Bans $0 in multi-line closures — too aggressive
+#   conditional_returns_on_newline     # Style preference, not a guideline
+#   expiring_todo                      # Project-specific workflow
+#   explicit_acl                       # We default to `internal`; mandatory ACL is noise
+#   explicit_enum_raw_value            # Often the inferred raw value is fine
+#   explicit_self                      # Conflicts with idiomatic Swift (omit self where possible)
+#   explicit_top_level_acl             # Same reason as explicit_acl
+#   explicit_type_interface            # Type inference is encouraged in Swift
+#   file_header                        # No license header policy in this project
+#   file_name                          # Enforced by convention, not lint
+#   file_types_order                   # Style preference
+#   ibinspectable_in_extension         # No Interface Builder
+#   implicit_return                    # Both styles are idiomatic
+#   indentation_width                  # Xcode handles indentation
+#   missing_docs                       # Docs are by exception, not blanket
+#   multiline_arguments_brackets       # Conflicts with SwiftUI builder style
+#   multiline_parameters_brackets      # Same as above
+#   nimble_operator / prefer_nimble    # Nimble not used
+#   no_extension_access_modifier       # Direct contradiction of extension_access_modifier (we use the latter)
+#   no_grouping_extension              # Grouping by extension is a valid pattern
+#   no_magic_numbers                   # Common-sense literals (0, 1, small constants) are fine
+#   nslocalizedstring_require_bundle   # We aren't using bundles yet
+#   object_literal                     # Contradicts discouraged_object_literal (we want the latter)
+#   prefixed_toplevel_constant         # `kFoo` is not idiomatic Swift
+#   prohibited_interface_builder       # No IB to prohibit
+#   quick_*                            # Quick not used
+#   required_deinit                    # Not all classes need explicit deinit
+#   required_enum_case                 # Project-specific exhaustiveness policy
+#   sorted_enum_cases                  # Order often carries meaning (e.g. priority)
+#   sorted_imports                     # Xcode doesn't sort; this churns diffs
+#   strict_fileprivate                 # `fileprivate` is a legitimate access level
+#   switch_case_on_newline             # Single-line cases are fine
+#   trailing_closure                   # SwiftUI builder syntax conflicts
+#   type_contents_order                # Style preference
+#   let_var_whitespace                 # Style preference
+
+# --- Rule customisation -------------------------------------------------------
+
+line_length:
+  warning: 140
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+
+identifier_name:
+  min_length:
+    warning: 2
+  excluded:
+    - id
+    - x
+    - y
+    - to
+    - on
+    - up
+    - db
+
+type_name:
+  min_length: 3
+  max_length:
+    warning: 50
+    error: 60
+
+function_body_length:
+  warning: 60
+  error: 120
+
+closure_body_length:
+  warning: 30
+  error: 60
+
+type_body_length:
+  warning: 300
+  error: 500
+
+file_length:
+  warning: 500
+  error: 800
+  ignore_comment_only_lines: true
+
+cyclomatic_complexity:
+  warning: 12
+  error: 20
+
+nesting:
+  type_level:
+    warning: 2
+  function_level:
+    warning: 4
+
+enum_case_associated_values_count:
+  warning: 5
+  error: 7
+
+# Reporter format. Xcode-friendly so issues link to lines in the IDE.
+reporter: "xcode"
+
+# Force constructs: errors in production, warning for force_unwrapping
+# (so legitimate compile-time constants don't block the build).
+force_cast: error
+force_try: error
+force_unwrapping:
+  severity: warning

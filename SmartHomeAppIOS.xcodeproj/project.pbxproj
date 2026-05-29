@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		90638AE82FCA28BE00FD7F19 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 90638AE72FCA28BE00FD7F19 /* .gitignore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		90380FE02FC7942E000FCB28 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,12 @@
 		90380FD22FC7942C000FCB28 /* SmartHomeAppIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartHomeAppIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		90380FDF2FC7942E000FCB28 /* SmartHomeAppIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SmartHomeAppIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		90380FE92FC7942E000FCB28 /* SmartHomeAppIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SmartHomeAppIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		90638AE72FCA28BE00FD7F19 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
+		90638AE92FCA2BF600FD7F19 /* .claudeignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .claudeignore; sourceTree = "<group>"; };
+		90638B032FCA2E6800FD7F19 /* .swiftlint.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = .swiftlint.yml; sourceTree = "<group>"; };
+		90638B042FCA2E6800FD7F19 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
+		90638B052FCA31D800FD7F19 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		90638B062FCA332700FD7F19 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -43,6 +53,11 @@
 		90380FEC2FC7942E000FCB28 /* SmartHomeAppIOSUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = SmartHomeAppIOSUITests;
+			sourceTree = "<group>";
+		};
+		90638AFF2FCA2C5700FD7F19 /* .claude */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = .claude;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,10 +90,17 @@
 		90380FC92FC7942C000FCB28 = {
 			isa = PBXGroup;
 			children = (
+				90638AFF2FCA2C5700FD7F19 /* .claude */,
 				90380FD42FC7942C000FCB28 /* SmartHomeAppIOS */,
 				90380FE22FC7942E000FCB28 /* SmartHomeAppIOSTests */,
 				90380FEC2FC7942E000FCB28 /* SmartHomeAppIOSUITests */,
 				90380FD32FC7942C000FCB28 /* Products */,
+				90638AE72FCA28BE00FD7F19 /* .gitignore */,
+				90638B032FCA2E6800FD7F19 /* .swiftlint.yml */,
+				90638AE92FCA2BF600FD7F19 /* .claudeignore */,
+				90638B042FCA2E6800FD7F19 /* CLAUDE.md */,
+				90638B052FCA31D800FD7F19 /* README.md */,
+				90638B062FCA332700FD7F19 /* LICENSE */,
 			);
 			sourceTree = "<group>";
 		};
@@ -212,6 +234,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				90638AE82FCA28BE00FD7F19 /* .gitignore in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -5,15 +5,19 @@ struct ContentView: View {
         ZStack {
             Color("BackgroundPrimary")
                 .ignoresSafeArea()
-            
-            VStack {
-                Image(systemName: "globe")
-                    .imageScale(.large)
-                    .foregroundStyle(Color("AccentPrimary"))
-                Text("Hello, world!")
-                    .foregroundStyle(Color("TextPrimary"))
+
+            TabView {
+                HomeView()
+                    .tabItem {
+                        Label("Home", systemImage: "house.fill")
+                    }
+
+                DevicesView()
+                    .tabItem {
+                        Label("Devices", systemImage: "lightbulb.fill")
+                    }
             }
-            .padding()
+            .tint(Color("AccentPrimary"))
         }
         
     }

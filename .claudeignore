@@ -1,0 +1,50 @@
+# Git
+.git/
+
+# Xcode user-specific state
+**/xcuserdata/
+**/*.xcuserstate
+**/project.xcworkspace/xcuserdata/
+
+# Build output
+build/
+DerivedData/
+**/DerivedData/
+*.xcresult/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+
+# CocoaPods (if ever added)
+Pods/
+
+# Carthage (if ever added)
+Carthage/Build/
+
+# Fastlane (if ever added)
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# IDE
+.vscode/
+.idea/
+
+# OS noise
+.DS_Store
+
+# Logs
+*.log
+
+# Secrets / local config
+*.xcconfig.local
+Config.local.plist
+**/.env
+**/.env.*
+
+# Generated docs
+docs/
+*.doccarchive
