@@ -16,6 +16,16 @@ struct ContentView: View {
                     .tabItem {
                         Label("Devices", systemImage: "lightbulb.fill")
                     }
+
+                ScenariosView()
+                    .tabItem {
+                        Label("Scenarios", systemImage: "wand.and.sparkles")
+                    }
+
+                SettingsView()
+                    .tabItem {
+                        Label("Settings", systemImage: "gearshape.fill")
+                    }
             }
             .tint(Color("AccentPrimary"))
         }
