@@ -34,7 +34,7 @@
 		90380FE92FC7942E000FCB28 /* SmartHomeAppIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SmartHomeAppIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		90638AE72FCA28BE00FD7F19 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		90638AE92FCA2BF600FD7F19 /* .claudeignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .claudeignore; sourceTree = "<group>"; };
-		90638B032FCA2E6800FD7F19 /* .swiftlint.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = .swiftlint.yml; sourceTree = "<group>"; };
+		90638B032FCA2E6800FD7F19 /* .swiftlint.yaml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = .swiftlint.yaml; sourceTree = "<group>"; };
 		90638B042FCA2E6800FD7F19 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
 		90638B052FCA31D800FD7F19 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		90638B062FCA332700FD7F19 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
@@ -98,7 +98,7 @@
 				90380FEC2FC7942E000FCB28 /* SmartHomeAppIOSUITests */,
 				90380FD32FC7942C000FCB28 /* Products */,
 				90638AE72FCA28BE00FD7F19 /* .gitignore */,
-				90638B032FCA2E6800FD7F19 /* .swiftlint.yml */,
+				90638B032FCA2E6800FD7F19 /* .swiftlint.yaml */,
 				90638AE92FCA2BF600FD7F19 /* .claudeignore */,
 				90638B042FCA2E6800FD7F19 /* CLAUDE.md */,
 				90638B052FCA31D800FD7F19 /* README.md */,

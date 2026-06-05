@@ -71,8 +71,6 @@ swiftlint
 swiftlint --fix
 ```
 
-Configuration lives in `.swiftlint.yml` at the repo root.
-
 ## License
 
 [PolyForm Noncommercial](LICENSE)

@@ -88,7 +88,7 @@ If `iPhone 17 Pro` isn't available, check `xcrun simctl list devices available` 
 
 ## Linting
 
-[SwiftLint](https://github.com/realm/SwiftLint) is configured via `.swiftlint.yml` at the repo root. Run `swiftlint` before finishing any task that touched Swift files (see the build & test section — it's part of the mandatory pre-report checks).
+[SwiftLint](https://github.com/realm/SwiftLint) is configured via `.swiftlint.yaml` at the repo root. Run `swiftlint` before finishing any task that touched Swift files (see the build & test section — it's part of the mandatory pre-report checks).
 
 ## Coding rules (short list — see agent files for full version)
 
@@ -133,7 +133,7 @@ Slash commands live in `.claude/commands/`:
 - Don't introduce CocoaPods or Carthage. SPM only.
 - Don't add comments that restate the code (`// Increment counter` above `counter += 1`).
 - Don't create planning / decision docs unless explicitly asked.
-- Don't add files to the Xcode project that should not be compiled (`README.md`, `.gitignore`, `.swiftlint.yml`, `LICENSE`). Either leave them out of the project entirely or add them with **all target memberships unchecked**.
+- Don't add files to the Xcode project that should not be compiled (`README.md`, `.gitignore`, `.swiftlint.yaml`, `LICENSE`). Either leave them out of the project entirely or add them with **all target memberships unchecked**.
 - Don't refactor unrelated code while fixing a bug. Keep changes scoped to the request.
 
 ## Git
