@@ -39,10 +39,7 @@ struct DevicesView: View {
                 )
             } else {
                 VStack(spacing: 0) {
-                    DeviceRoomFilterList(
-                        availableRooms: viewModel.availableRooms,
-                        selection: $viewModel.selectedRoom,
-                    )
+                    DeviceRoomFilterList(availableRooms: viewModel.availableRooms, selection: $viewModel.selectedRoom)
                     DeviceList(roomGroups: viewModel.visibleRoomGroups).environment(viewModel)
                 }
             }
