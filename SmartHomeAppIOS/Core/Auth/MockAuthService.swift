@@ -16,7 +16,6 @@ struct MockAuthService: AuthService {
             throw AuthError.invalidLoginCredentials
         }
         return AuthToken(
-            email: email,
             externalId: "mock-external-id",
             accessToken: "xxx",
             refreshToken: "mock-refresh-token"

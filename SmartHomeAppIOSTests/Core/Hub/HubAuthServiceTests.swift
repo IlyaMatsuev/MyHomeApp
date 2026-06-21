@@ -51,7 +51,6 @@ struct HubAuthServiceTests {
         let token = try await service.login(email: "user@example.com", password: "password")
 
         #expect(token == AuthToken(
-            email: "user@example.com",
             externalId: "ext-1",
             accessToken: "access-1",
             refreshToken: "refresh-1"

@@ -11,10 +11,9 @@ struct MockAuthServiceTests {
     // MARK: - login()
 
     @Test
-    func loginWithValidCredentialsReturnsMatchingToken() async throws {
+    func loginWithValidCredentialsReturnsToken() async throws {
         let token = try await service.login(email: validEmail, password: validPassword)
 
-        #expect(token.email == validEmail)
         #expect(!token.accessToken.isEmpty)
     }
 

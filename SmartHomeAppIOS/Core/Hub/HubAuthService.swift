@@ -24,7 +24,6 @@ struct HubAuthService: AuthService {
             let request = try HubRequest.put("/auth/login", body, protected: false)
             let response: LoginResponse = try await client.send(request)
             return AuthToken(
-                email: email,
                 externalId: response.externalId,
                 accessToken: response.accessToken,
                 refreshToken: response.refreshToken

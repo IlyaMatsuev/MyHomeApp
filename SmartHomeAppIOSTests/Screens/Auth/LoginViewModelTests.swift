@@ -112,7 +112,7 @@ struct LoginViewModelTests {
 
     @Test
     func submitOnSuccessAuthenticatesSessionAndClearsError() async {
-        let token = AuthToken.fixture(email: "user@example.com", accessToken: "tok")
+        let token = AuthToken.fixture(accessToken: "tok")
         service.loginResult = .success(token)
         viewModel.email = "user@example.com"
         viewModel.password = "password"

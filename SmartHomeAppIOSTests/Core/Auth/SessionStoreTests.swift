@@ -26,7 +26,7 @@ struct SessionStoreTests {
 
     @Test
     func loadWithPersistedTokenBecomesAuthenticated() async throws {
-        let token = AuthToken.fixture(email: "saved@example.com", accessToken: "abc")
+        let token = AuthToken.fixture(accessToken: "abc")
         tokenStore.loadResult = .success(token)
 
         await store.load()
@@ -60,7 +60,7 @@ struct SessionStoreTests {
 
     @Test
     func loginOnSuccessSavesTokenAndBecomesAuthenticated() async throws {
-        let token = AuthToken.fixture(email: "user@example.com", accessToken: "tok")
+        let token = AuthToken.fixture(accessToken: "tok")
         service.loginResult = .success(token)
 
         try await store.login(email: "user@example.com", password: "password")
