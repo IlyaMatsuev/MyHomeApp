@@ -25,6 +25,10 @@ final class SessionStore {
         return nil
     }
 
+    var sessionToken: AuthToken? {
+        return session == nil ? nil : session?.token
+    }
+
     init(service: AuthService, tokenStore: TokenStore) {
         self.service = service
         self.tokenStore = tokenStore

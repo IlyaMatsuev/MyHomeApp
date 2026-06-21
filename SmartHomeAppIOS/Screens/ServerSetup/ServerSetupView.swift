@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ServerSetupView: View {
     @Environment(ServerConfigStore.self) private var serverConfigStore
+    @Environment(\.serverConfigService) private var serverConfigService
     @State private var viewModel: ServerSetupViewModel?
 
     var mode: ServerSetupMode = .initialSetup
@@ -19,7 +20,11 @@ struct ServerSetupView: View {
         .toolbar(.hidden, for: .tabBar)
         .onAppear {
             if viewModel == nil {
-                viewModel = ServerSetupViewModel(mode: mode, store: serverConfigStore)
+                viewModel = ServerSetupViewModel(
+                    mode: mode,
+                    store: serverConfigStore,
+                    service: serverConfigService
+                )
             }
         }
     }

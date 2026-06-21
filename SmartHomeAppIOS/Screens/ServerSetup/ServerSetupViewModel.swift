@@ -41,7 +41,7 @@ final class ServerSetupViewModel {
         !loading && !isServerFormOpen && !servers.isEmpty
     }
 
-    init(mode: ServerSetupMode, store: ServerConfigStore, service: ServerConfigService = MockServerConfigService()) {
+    init(mode: ServerSetupMode, store: ServerConfigStore, service: ServerConfigService) {
         self.mode = mode
         self.store = store
         self.service = service

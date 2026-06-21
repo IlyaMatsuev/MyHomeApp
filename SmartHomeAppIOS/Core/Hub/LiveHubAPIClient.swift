@@ -1,40 +1,62 @@
 import Foundation
 import os
 
-struct LiveHubAPIClient: HubAPIClient {
+/// Token provider is mutated only during app construction (see `SmartHomeAppIOSApp`),
+/// then read by request handling — hence `@unchecked Sendable`.
+final class LiveHubAPIClient: HubAPIClient, @unchecked Sendable {
     private static let logger = Logger(subsystem: "SmartHomeApp", category: "LiveHubAPIClient")
 
     private let session: URLSession
-    private let currentServer: @MainActor @Sendable () -> Server?
-    private let currentToken: @MainActor @Sendable () -> AuthToken?
-    private let decoder: JSONDecoder
 
-    init(
-        session: URLSession = .shared,
-        currentServer: @escaping @MainActor @Sendable () -> Server?,
-        currentToken: @escaping @MainActor @Sendable () -> AuthToken?
-    ) {
+    private var currentServer: @MainActor @Sendable () -> Server?
+    private var currentToken: @MainActor @Sendable () -> AuthToken?
+
+    init(session: URLSession = .shared) {
         self.session = session
-        self.currentServer = currentServer
-        self.currentToken = currentToken
-        self.decoder = JSONDecoder()
+        self.currentServer = { nil }
+        self.currentToken = { nil }
+    }
+
+    func setServerProvider(_ provider: @escaping @MainActor @Sendable () -> Server?) {
+        currentServer = provider
+    }
+
+    func setTokenProvider(_ provider: @escaping @MainActor @Sendable () -> AuthToken?) {
+        currentToken = provider
     }
 
     func send<T: Decodable & Sendable>(_ request: HubRequest) async throws -> T {
-        let data = try await perform(request)
+        let server = try await resolveCurrentServer()
+        return try await send(request, to: server)
+    }
+
+    func send(_ request: HubRequest) async throws {
+        let server = try await resolveCurrentServer()
+        try await send(request, to: server)
+    }
+
+    func send<T: Decodable & Sendable>(_ request: HubRequest, to server: Server) async throws -> T {
+        let data = try await perform(request, server: server)
         do {
-            return try decoder.decode(T.self, from: data)
+            return try JSONDecoder().decode(T.self, from: data)
         } catch {
             throw HubAPIError.decoding(error.localizedDescription)
         }
     }
 
-    func send(_ request: HubRequest) async throws {
-        _ = try await perform(request)
+    func send(_ request: HubRequest, to server: Server) async throws {
+        _ = try await perform(request, server: server)
     }
 
-    private func perform(_ request: HubRequest) async throws -> Data {
-        guard let baseURL = await currentServer()?.baseURL else {
+    private func resolveCurrentServer() async throws -> Server {
+        guard let server = await currentServer() else {
+            throw HubAPIError.noServerSelected
+        }
+        return server
+    }
+
+    private func perform(_ request: HubRequest, server: Server) async throws -> Data {
+        guard let baseURL = server.baseURL else {
             throw HubAPIError.noServerSelected
         }
 
@@ -78,8 +100,9 @@ struct LiveHubAPIClient: HubAPIClient {
     }
 
     private func handleResponse(_ data: Data, _ response: HTTPURLResponse) throws -> Data {
-        Self.logger.debug("Received a response (\(response.statusCode)) with a body: \(String(data: data, encoding: .utf8) ?? "<binary>")")
-        
+        let body = String(data: data, encoding: .utf8) ?? "<binary>"
+        Self.logger.debug("Received a response (\(response.statusCode)) with a body: \(body)")
+
         switch response.statusCode {
         case 200..<300:
             return data

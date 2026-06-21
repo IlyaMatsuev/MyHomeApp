@@ -16,11 +16,10 @@ struct LiveHubAPIClientTests {
         token: AuthToken? = LiveHubAPIClientTests.token,
         handler: @escaping TestURLProtocol.Handler
     ) -> LiveHubAPIClient {
-        LiveHubAPIClient(
-            session: .testSession(handler: handler),
-            currentServer: { server },
-            currentToken: { token }
-        )
+        let client = LiveHubAPIClient(session: .testSession(handler: handler))
+        client.setServerProvider { server }
+        client.setTokenProvider { token }
+        return client
     }
 
     private static func okResponse(for request: URLRequest, body: Data = Data()) -> (HTTPURLResponse, Data) {
@@ -190,6 +189,84 @@ struct LiveHubAPIClientTests {
         } catch let error as HubAPIError {
             #expect(error == .http(status: 500, body: "boom"))
         }
+    }
+
+    // MARK: - send(to:)
+
+    @Test
+    func sendToServerUsesProvidedServerInsteadOfCurrentServerProvider() async throws {
+        let captured = CapturedRequest()
+        let client = Self.makeClient(server: nil) { request in
+            captured.value = request
+            return Self.okResponse(for: request, body: try Self.encode(SamplePayload(name: "x")))
+        }
+        let target = Server(.https, "other.host:9000", label: "Other")
+
+        let _: SamplePayload = try await client.send(.get("/devices"), to: target)
+
+        let request = try #require(captured.value)
+        #expect(request.url?.absoluteString == "https://other.host:9000/devices")
+    }
+
+    @Test
+    func sendToServerAttachesBearerTokenWhenRequestIsProtected() async throws {
+        let captured = CapturedRequest()
+        let client = Self.makeClient(server: nil) { request in
+            captured.value = request
+            return Self.okResponse(for: request, body: try Self.encode(SamplePayload(name: "x")))
+        }
+
+        let _: SamplePayload = try await client.send(.get("/devices"), to: Self.server)
+
+        let request = try #require(captured.value)
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer test-token")
+    }
+
+    // MARK: - setServerProvider
+
+    @Test
+    func sendThrowsNoServerSelectedBeforeServerProviderIsSet() async {
+        let client = LiveHubAPIClient(session: .testSession(handler: { _ in (HTTPURLResponse(), Data()) }))
+
+        await #expect(throws: HubAPIError.noServerSelected) {
+            let _: SamplePayload = try await client.send(.get("/devices"))
+        }
+    }
+
+    @Test
+    func setServerProviderReplacesServerUsedForSubsequentRequests() async throws {
+        let captured = CapturedRequest()
+        let client = LiveHubAPIClient(session: .testSession(handler: { request in
+            captured.value = request
+            return Self.okResponse(for: request, body: try Self.encode(SamplePayload(name: "x")))
+        }))
+
+        client.setServerProvider { Server(.http, "first.host:8080", label: "First") }
+        let _: SamplePayload = try await client.send(.get("/devices"))
+        #expect(try #require(captured.value).url?.absoluteString == "http://first.host:8080/devices")
+
+        client.setServerProvider { Server(.https, "second.host:9000", label: "Second") }
+        let _: SamplePayload = try await client.send(.get("/devices"))
+        #expect(try #require(captured.value).url?.absoluteString == "https://second.host:9000/devices")
+    }
+
+    // MARK: - setTokenProvider
+
+    @Test
+    func setTokenProviderReplacesTokenUsedForSubsequentRequests() async throws {
+        let captured = CapturedRequest()
+        let client = LiveHubAPIClient(session: .testSession(handler: { request in
+            captured.value = request
+            return Self.okResponse(for: request, body: try Self.encode(SamplePayload(name: "x")))
+        }))
+        client.setServerProvider { Self.server }
+
+        let _: SamplePayload = try await client.send(.get("/devices"))
+        #expect(try #require(captured.value).value(forHTTPHeaderField: "Authorization") == nil)
+
+        client.setTokenProvider { AuthToken.fixture(accessToken: "later-token") }
+        let _: SamplePayload = try await client.send(.get("/devices"))
+        #expect(try #require(captured.value).value(forHTTPHeaderField: "Authorization") == "Bearer later-token")
     }
 
     // MARK: - transport errors
