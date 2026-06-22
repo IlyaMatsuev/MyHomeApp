@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LoginForm: View {
     @Bindable var viewModel: LoginViewModel
+    var onRequestAccess: () -> Void
 
     var body: some View {
         VStack(spacing: 24) {
@@ -51,7 +52,7 @@ struct LoginForm: View {
             .disabled(!viewModel.canSubmit)
 
             Button("No account yet?") {
-                // TODO: Sign-up flow is not implemented yet
+                onRequestAccess()
             }
             .font(.footnote)
             .foregroundStyle(Color("AccentPrimary"))

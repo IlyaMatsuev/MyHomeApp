@@ -5,6 +5,7 @@ struct MyHomeApp: App {
     private let toastStore: ToastStore
     private let serverConfigStore: ServerConfigStore
     private let sessionStore: SessionStore
+    private let registrationStore: RegistrationStore
     private let serverConfigService: any ServerConfigService
     private let deviceService: any DeviceService
 
@@ -22,6 +23,10 @@ struct MyHomeApp: App {
         self.toastStore = ToastStore()
         self.serverConfigStore = serverConfigStore
         self.sessionStore = sessionStore
+        self.registrationStore = RegistrationStore(
+            service: HubRegistrationService(client: apiClient),
+            persistence: UserDefaultsRegistrationPersistence()
+        )
         self.serverConfigService = HubServerConfigService(client: apiClient)
         self.deviceService = HubDeviceService(client: apiClient)
     }
@@ -32,6 +37,7 @@ struct MyHomeApp: App {
                 .toastOverlay()
                 .environment(sessionStore)
                 .environment(serverConfigStore)
+                .environment(registrationStore)
                 .environment(\.serverConfigService, serverConfigService)
                 .environment(\.deviceService, deviceService)
                 .environment(toastStore)

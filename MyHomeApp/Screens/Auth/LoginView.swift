@@ -3,6 +3,7 @@ import SwiftUI
 struct LoginView: View {
     @Environment(SessionStore.self) private var sessionStore
     @State private var viewModel: LoginViewModel?
+    @State private var showRegistration = false
 
     var body: some View {
         NavigationStack {
@@ -10,7 +11,9 @@ struct LoginView: View {
                 Color("BackgroundPrimary").ignoresSafeArea()
 
                 if let viewModel {
-                    LoginForm(viewModel: viewModel)
+                    LoginForm(viewModel: viewModel) {
+                        showRegistration = true
+                    }
                 }
             }
             .toolbar {
@@ -20,6 +23,9 @@ struct LoginView: View {
             }
             .toolbarBackground(.hidden, for: .navigationBar)
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(isPresented: $showRegistration) {
+                RegistrationRequestView()
+            }
         }
         .onAppear {
             if viewModel == nil {
@@ -31,10 +37,15 @@ struct LoginView: View {
 
 #Preview {
     let sessionStore = SessionStore(service: MockAuthService(operationDelay: .zero), tokenStore: InMemoryTokenStore())
+    let registrationStore = RegistrationStore(
+        service: MockRegistrationService(operationDelay: .zero),
+        persistence: InMemoryRegistrationPersistence()
+    )
     let server = Server(.http, "hub.local:8080", remote: false, label: "Home")
     let serverStore = ServerConfigStore(persistence: InMemoryServerConfigPersistence(initial: [server]))
     return LoginView()
         .environment(sessionStore)
+        .environment(registrationStore)
         .environment(serverStore)
         .task { await serverStore.load() }
 }
