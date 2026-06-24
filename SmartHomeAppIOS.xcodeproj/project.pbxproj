@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		90638AE82FCA28BE00FD7F19 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 90638AE72FCA28BE00FD7F19 /* .gitignore */; };
 		90638B3A2FCA520B00FD7F19 /* AnyCodable in Frameworks */ = {isa = PBXBuildFile; productRef = 90638B392FCA520B00FD7F19 /* AnyCodable */; };
+		90AA85262FEC83C800FD577C /* PopupView in Frameworks */ = {isa = PBXBuildFile; productRef = 90AA85252FEC83C800FD577C /* PopupView */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,6 +71,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				90AA85262FEC83C800FD577C /* PopupView in Frameworks */,
 				90638B3A2FCA520B00FD7F19 /* AnyCodable in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -142,6 +144,7 @@
 			name = SmartHomeAppIOS;
 			packageProductDependencies = (
 				90638B392FCA520B00FD7F19 /* AnyCodable */,
+				90AA85252FEC83C800FD577C /* PopupView */,
 			);
 			productName = SmartHomeAppIOS;
 			productReference = 90380FD22FC7942C000FCB28 /* SmartHomeAppIOS.app */;
@@ -228,6 +231,7 @@
 			packageReferences = (
 				90638B382FCA520B00FD7F19 /* XCRemoteSwiftPackageReference "AnyCodable" */,
 				90638B942FCC9A8700FD7F19 /* XCRemoteSwiftPackageReference "SwiftLint" */,
+				90AA85242FEC83C800FD577C /* XCRemoteSwiftPackageReference "PopupView" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 90380FD32FC7942C000FCB28 /* Products */;
@@ -649,6 +653,14 @@
 				minimumVersion = 0.63.3;
 			};
 		};
+		90AA85242FEC83C800FD577C /* XCRemoteSwiftPackageReference "PopupView" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/exyte/PopupView";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -661,6 +673,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 90638B942FCC9A8700FD7F19 /* XCRemoteSwiftPackageReference "SwiftLint" */;
 			productName = "plugin:SwiftLintBuildToolPlugin";
+		};
+		90AA85252FEC83C800FD577C /* PopupView */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 90AA85242FEC83C800FD577C /* XCRemoteSwiftPackageReference "PopupView" */;
+			productName = PopupView;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

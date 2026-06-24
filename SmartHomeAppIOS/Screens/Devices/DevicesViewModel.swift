@@ -32,6 +32,7 @@ final class DevicesViewModel {
     private(set) var loadingDeviceIds: Set<String> = []
 
     private let service: DeviceService
+    private let toastStore: ToastStore
 
     var availableRooms: [DeviceRoom] { roomGroups.map(\.room) }
 
@@ -45,8 +46,9 @@ final class DevicesViewModel {
         }
     }
 
-    init(service: DeviceService, selectedRoom: DeviceRoomFilter = .all) {
+    init(service: DeviceService, toastStore: ToastStore, selectedRoom: DeviceRoomFilter = .all) {
         self.service = service
+        self.toastStore = toastStore
         self.selectedRoom = selectedRoom
     }
 
@@ -59,6 +61,7 @@ final class DevicesViewModel {
             state = .loaded
         } catch {
             state = .failed(error.localizedDescription)
+            toastStore.error(errorMessage(for: error))
         }
     }
 
@@ -81,6 +84,7 @@ final class DevicesViewModel {
             replaceDevice(updated)
         } catch {
             replaceDevice(previous)
+            toastStore.error(errorMessage(for: error))
             Self.logger.error("Error while updating a control for \"\(device.id)\": \(error.localizedDescription)")
         }
 
@@ -114,5 +118,20 @@ final class DevicesViewModel {
         return grouped
             .map { DeviceRoomGroup(room: $0, devices: $1.sorted()) }
             .sorted(using: KeyPathComparator(\.room))
+    }
+
+    private func errorMessage(for error: Error) -> String {
+        switch error {
+        case HubAPIError.transport:
+            return "No Internet connection"
+        case HubAPIError.unauthorized, HubAPIError.forbidden:
+            return "Your session has expired, please log in again"
+        case HubAPIError.notFound:
+            return "This device does not exist anymore. Try refreshing the page"
+        case HubAPIError.validation:
+            return "Failed updating the device"
+        default:
+            return "Oops... Something went wrong"
+        }
     }
 }

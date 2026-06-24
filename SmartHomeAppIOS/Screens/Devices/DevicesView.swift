@@ -3,8 +3,8 @@ import SwiftUI
 struct DevicesView: View {
     @State private var viewModel: DevicesViewModel
 
-    init(service: any DeviceService) {
-        self._viewModel = State(initialValue: DevicesViewModel(service: service))
+    init(service: any DeviceService, toastStore: ToastStore) {
+        self._viewModel = State(initialValue: DevicesViewModel(service: service, toastStore: toastStore))
     }
 
     var body: some View {
@@ -59,7 +59,7 @@ struct DevicesView: View {
 #Preview {
     let server = Server(.http, "hub.local:8080", remote: false, label: "Home")
     let store = ServerConfigStore(persistence: InMemoryServerConfigPersistence(initial: [server]))
-    return DevicesView(service: MockDeviceService())
+    return DevicesView(service: MockDeviceService(), toastStore: ToastStore())
         .environment(store)
         .task { await store.load() }
 }
