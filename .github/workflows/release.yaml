@@ -48,6 +48,8 @@ jobs:
             -scheme SmartHomeAppIOS \
             -destination 'generic/platform=iOS' \
             -archivePath build/SmartHomeAppIOS.xcarchive \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
             MARKETING_VERSION="${{ inputs.version }}" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             CODE_SIGNING_ALLOWED=NO \
