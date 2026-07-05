@@ -2,6 +2,10 @@
 
 iOS client for the [MySmartHome](https://github.com/IlyaMatsuev/MySmartHome) hub. Built with SwiftUI.
 
+**Download page:** <https://ilyamatsuev.github.io/SmartHomeAppIOS/>
+
+![My Home Banner](./public/banner.png)
+
 ## Requirements
 
 - **Xcode** 26.x
