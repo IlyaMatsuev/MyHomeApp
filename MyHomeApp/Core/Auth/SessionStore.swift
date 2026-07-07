@@ -62,11 +62,14 @@ final class SessionStore {
             try tokenStore.save(newToken)
             state = .authenticated(AuthSession(token: newToken))
             return true
-        } catch {
-            Self.logger.error("Token refresh failed: \(error.localizedDescription)")
+        } catch AuthError.sessionExpired {
+            Self.logger.error("Token refresh failed: session expired")
             try? tokenStore.clear()
             state = .unauthenticated
+            return false
+        } catch {
+            Self.logger.error("Token refresh failed, preserving session: \(error.localizedDescription)")
+            return false
         }
-        return false
     }
 }
