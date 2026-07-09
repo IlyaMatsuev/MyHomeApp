@@ -216,7 +216,7 @@ struct HubAPIClientTests {
     }
 
     @Test
-    func sendNon2xxThrowsHttpWithStatusAndBody() async throws {
+    func sendNon2xxThrowsUnexpected() async throws {
         let client = Self.makeClient { request in
             Self.response(for: request, status: 500, body: Data("boom".utf8))
         }
@@ -225,7 +225,7 @@ struct HubAPIClientTests {
             let _: SamplePayload = try await client.send(.get("/devices"))
             Issue.record("expected throw")
         } catch let error as HubAPIError {
-            #expect(error == .http(status: 500, body: "boom"))
+            #expect(error == .unexpected)
         }
     }
 

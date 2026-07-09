@@ -4,8 +4,6 @@ import Observation
 @Observable
 @MainActor
 final class LoginViewModel {
-    private static let emailRegex = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/
-
     private let sessionStore: SessionStore
 
     private(set) var loading = false
@@ -19,7 +17,7 @@ final class LoginViewModel {
     }
 
     var isEmailValid: Bool {
-        !email.isEmpty && (try? Self.emailRegex.wholeMatch(in: email)) != nil
+        email.isValidEmail
     }
 
     var isPasswordValid: Bool {

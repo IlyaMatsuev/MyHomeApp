@@ -87,6 +87,32 @@ struct SessionStoreTests {
         #expect(tokenStore.savedTokens.isEmpty)
     }
 
+    // MARK: - register()
+
+    @Test
+    func registerDelegatesToServiceWithoutChangingState() async throws {
+        await store.load()
+        #expect(store.state == .unauthenticated)
+
+        try await store.register(email: "new@home.dev", password: "secret")
+
+        #expect(service.registerCalls.count == 1)
+        let call = try #require(service.registerCalls.first)
+        #expect(call.email == "new@home.dev")
+        #expect(call.password == "secret")
+        #expect(store.state == .unauthenticated)
+        #expect(tokenStore.savedTokens.isEmpty)
+    }
+
+    @Test
+    func registerPropagatesServiceError() async {
+        service.registerResult = .failure(AuthError.emailAlreadyTaken)
+
+        await #expect(throws: AuthError.emailAlreadyTaken) {
+            try await store.register(email: "dup@home.dev", password: "secret")
+        }
+    }
+
     // MARK: - refresh()
 
     @Test

@@ -144,6 +144,10 @@ final class HubAPIClient: MyHomeAPIClient, @unchecked Sendable {
             throw HubAPIError.forbidden
         case 404:
             throw HubAPIError.notFound
+        case 409:
+            throw HubAPIError.conflict
+        case 429:
+            throw HubAPIError.tooManyRequests
         default:
             throw HubAPIError.unexpected
         }

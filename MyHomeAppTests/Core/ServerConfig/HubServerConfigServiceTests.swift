@@ -60,8 +60,8 @@ struct HubServerConfigServiceTests {
     }
 
     @Test
-    func isReachableReturnsFalseWhenClientThrowsHttpError() async {
-        client.response = .error(HubAPIError.http(status: 500, body: "boom"))
+    func isReachableReturnsFalseWhenClientThrowsUnexpectedError() async {
+        client.response = .error(HubAPIError.unexpected)
 
         #expect(!(await service.isReachable(server: Self.server)))
     }

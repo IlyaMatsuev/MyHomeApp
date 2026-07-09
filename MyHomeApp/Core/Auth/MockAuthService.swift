@@ -30,4 +30,8 @@ struct MockAuthService: AuthService {
             refreshToken: "mock-refresh-token"
         )
     }
+
+    func register(email _: String, password _: String) async throws {
+        try await Task.sleep(for: operationDelay)
+    }
 }

@@ -157,6 +157,61 @@ struct HubAuthServiceTests {
         }
     }
 
+    // MARK: - register()
+
+    @Test
+    func registerSendsPostAuthRegisterAsUnprotectedRequest() async throws {
+        client.response = .data(Data())
+
+        try await service.register(email: "new@home.dev", password: "secret")
+
+        #expect(client.sentRequests.count == 1)
+        let request = try #require(client.sentRequests.first)
+        #expect(request.method == .post)
+        #expect(request.path == "/auth/register")
+        #expect(request.protected == false)
+    }
+
+    @Test
+    func registerSendsEmailAndPasswordInRequestBody() async throws {
+        client.response = .data(Data())
+
+        try await service.register(email: "new@home.dev", password: "secret")
+
+        let request = try #require(client.sentRequests.first)
+        let body = try #require(request.body)
+        let decoded = try JSONDecoder().decode(LoginRequestPayload.self, from: body)
+        #expect(decoded == LoginRequestPayload(email: "new@home.dev", password: "secret"))
+    }
+
+    @Test
+    func registerMapsConflictToEmailAlreadyRegistered() async {
+        client.response = .error(HubAPIError.conflict)
+
+        await #expect(throws: AuthError.emailAlreadyTaken) {
+            try await service.register(email: "dup@home.dev", password: "secret")
+        }
+    }
+
+    @Test
+    func registerMapsValidationToRegistrationRejectedWithServerMessage() async {
+        let message = "Your registration request has been cancelled. Please submit a new registration request."
+        client.response = .error(HubAPIError.validation("email", message))
+
+        await #expect(throws: AuthError.validation(message)) {
+            try await service.register(email: "new@home.dev", password: "secret")
+        }
+    }
+
+    @Test
+    func registerMapsOtherHubErrorsToUnexpected() async {
+        client.response = .error(HubAPIError.transport)
+
+        await #expect(throws: AuthError.unexpected) {
+            try await service.register(email: "new@home.dev", password: "secret")
+        }
+    }
+
     // MARK: - helpers
 
     private struct LoginRequestPayload: Codable, Equatable {

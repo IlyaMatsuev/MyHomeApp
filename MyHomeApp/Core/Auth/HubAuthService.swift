@@ -10,6 +10,11 @@ struct HubAuthService: AuthService {
         let refreshToken: String
     }
 
+    private struct RegisterRequest: Encodable {
+        let email: String
+        let password: String
+    }
+
     private struct TokenResponse: Decodable {
         let externalId: String
         let accessToken: String
@@ -51,6 +56,20 @@ struct HubAuthService: AuthService {
             )
         } catch HubAPIError.unauthorized, HubAPIError.validation {
             throw AuthError.sessionExpired
+        } catch {
+            throw AuthError.unexpected
+        }
+    }
+
+    func register(email: String, password: String) async throws {
+        do {
+            let body = RegisterRequest(email: email, password: password)
+            let request = try HubRequest.post("/auth/register", body, protected: false)
+            try await client.send(request)
+        } catch HubAPIError.conflict {
+            throw AuthError.emailAlreadyTaken
+        } catch HubAPIError.validation(_, let message) {
+            throw AuthError.validation(message)
         } catch {
             throw AuthError.unexpected
         }

@@ -39,8 +39,8 @@
 		90638B062FCA332700FD7F19 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		90D63E922FDA0D2F0090797B /* AllTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = AllTests.xctestplan; sourceTree = "<group>"; };
 		90D63E932FDA0D2F0090797B /* UnitTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = UnitTests.xctestplan; sourceTree = "<group>"; };
-		9E9E9E9E00000000E9E9E9E9 /* Local.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Local.xcconfig; sourceTree = "<group>"; };
 		90FC3DCA2FFAA94F00A13677 /* docker-compose.yaml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = "docker-compose.yaml"; sourceTree = "<group>"; };
+		9E9E9E9E00000000E9E9E9E9 /* Local.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Local.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */

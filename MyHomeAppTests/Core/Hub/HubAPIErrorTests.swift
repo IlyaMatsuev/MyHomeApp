@@ -28,14 +28,32 @@ struct HubAPIErrorTests {
     }
 
     @Test
-    func httpWithBodyIncludesStatusAndBody() {
-        let description = HubAPIError.http(status: 500, body: "boom").errorDescription
-        #expect(description == "Server returned 500: boom")
+    func forbiddenDescribesForbiddenRequest() {
+        let description = HubAPIError.forbidden.errorDescription
+        #expect(description == "The request was forbidden")
     }
 
     @Test
-    func httpWithoutBodyIncludesStatusOnly() {
-        let description = HubAPIError.http(status: 404, body: nil).errorDescription
-        #expect(description == "Server returned 404")
+    func validationSurfacesUnderlyingMessage() {
+        let description = HubAPIError.validation("email", "must be a valid email").errorDescription
+        #expect(description == "must be a valid email")
+    }
+
+    @Test
+    func notFoundDescribesMissingResource() {
+        let description = HubAPIError.notFound.errorDescription
+        #expect(description == "The requested resource was not found")
+    }
+
+    @Test
+    func conflictDescribesConflictingState() {
+        let description = HubAPIError.conflict.errorDescription
+        #expect(description == "The request conflicts with the current state of the server")
+    }
+
+    @Test
+    func unexpectedDescribesGenericFailure() {
+        let description = HubAPIError.unexpected.errorDescription
+        #expect(description == "Something went wrong")
     }
 }

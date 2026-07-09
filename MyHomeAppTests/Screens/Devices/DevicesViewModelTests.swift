@@ -5,11 +5,13 @@ import Testing
 @MainActor
 struct DevicesViewModelTests {
     private let service: StubDeviceService
+    private let toastStore: ToastStore
     private let viewModel: DevicesViewModel
 
     init() {
         service = StubDeviceService()
-        viewModel = DevicesViewModel(service: service)
+        toastStore = ToastStore()
+        viewModel = DevicesViewModel(service: service, toastStore: toastStore)
     }
 
     // MARK: - init
@@ -21,7 +23,7 @@ struct DevicesViewModelTests {
 
     @Test
     func initHonorsSelectedRoomOverride() {
-        let viewModel = DevicesViewModel(service: service, selectedRoom: .specific(.kitchen))
+        let viewModel = DevicesViewModel(service: service, toastStore: toastStore, selectedRoom: .specific(.kitchen))
         #expect(viewModel.selectedRoom == .specific(.kitchen))
     }
 

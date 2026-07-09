@@ -53,6 +53,19 @@ final class SessionStore {
         state = .authenticated(AuthSession(token: token))
     }
 
+    func register(email: String, password: String) async throws {
+        try await service.register(email: email, password: password)
+    }
+
+    func logout() {
+        do {
+            try tokenStore.clear()
+        } catch {
+            Self.logger.error("Failed to clear the session during logout: \(error.localizedDescription)")
+        }
+        state = .unauthenticated
+    }
+
     func refresh() async -> Bool {
         do {
             guard let token = sessionToken else {
@@ -62,11 +75,14 @@ final class SessionStore {
             try tokenStore.save(newToken)
             state = .authenticated(AuthSession(token: newToken))
             return true
-        } catch {
-            Self.logger.error("Token refresh failed: \(error.localizedDescription)")
+        } catch AuthError.sessionExpired {
+            Self.logger.error("Token refresh failed: session expired")
             try? tokenStore.clear()
             state = .unauthenticated
+            return false
+        } catch {
+            Self.logger.error("Token refresh failed, preserving session: \(error.localizedDescription)")
+            return false
         }
-        return false
     }
 }
