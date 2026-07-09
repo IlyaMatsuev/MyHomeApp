@@ -31,12 +31,11 @@ final class RegistrationStatusViewModel {
         refreshing = false
     }
 
-    func cancel() async {
+    func cancel() {
         guard !cancelling else { return }
 
         cancelling = true
-        // TODO: Send cancellation callout to the HubAPI PUT /auth/register/requests/:requestId
-        await registrationStore.cancel()
+        registrationStore.cancelAndClear()
         cancelling = false
     }
 }

@@ -22,4 +22,8 @@ struct MockRegistrationService: RegistrationService {
         try await Task.sleep(for: operationDelay)
         return resolvedStatus
     }
+
+    func cancelRequest(requestId _: String) async throws {
+        try await Task.sleep(for: operationDelay)
+    }
 }

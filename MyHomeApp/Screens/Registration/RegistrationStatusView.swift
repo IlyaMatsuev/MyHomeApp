@@ -32,10 +32,8 @@ struct RegistrationStatusView: View {
             titleVisibility: .visible
         ) {
             Button("Cancel request", role: .destructive) {
-                Task {
-                    await viewModel?.cancel()
-                    onDismiss()
-                }
+                viewModel?.cancel()
+                onDismiss()
             }
             Button("Keep request", role: .cancel) {}
         } message: {

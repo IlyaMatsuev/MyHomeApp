@@ -45,6 +45,17 @@ struct HubRegistrationService: RegistrationService {
         }
     }
 
+    func cancelRequest(requestId: String) async throws {
+        do {
+            let request = HubRequest.delete("/auth/register/requests/\(requestId)", protected: false)
+            try await client.send(request)
+        } catch let error as HubAPIError {
+            throw Self.mapError(error)
+        } catch {
+            throw RegistrationError.unexpected
+        }
+    }
+
     private static func mapError(_ error: HubAPIError) -> RegistrationError {
         switch error {
         case .conflict: .alreadyRequested

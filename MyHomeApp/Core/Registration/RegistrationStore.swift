@@ -47,10 +47,24 @@ final class RegistrationStore {
         }
     }
 
+    func clear() {
+        do {
+            try persistence.clear()
+        } catch {
+            Self.logger.error("Failed to clear a registration request: \(error.localizedDescription)")
+        }
+        state = .absent
+    }
+
     func requestAccess(email: String, comment: String?) async throws {
+        let previous = pendingRequest
         let request = try await service.requestAccess(email: email, comment: comment)
         try? persistence.save(request)
         state = .pending(request)
+
+        if let previous {
+            cancelRequest(requestId: previous.externalId)
+        }
     }
 
     @discardableResult
@@ -65,18 +79,15 @@ final class RegistrationStore {
         return status
     }
 
-    func cancel() async {
-        // The server callout to withdraw the request (via pendingRequest?.externalId)
-        // will be made here before clearing locally; not yet wired up.
+    func cancelAndClear() {
+        if let request = pendingRequest {
+            cancelRequest(requestId: request.externalId)
+        }
         clear()
     }
 
-    func clear() {
-        do {
-            try persistence.clear()
-        } catch {
-            Self.logger.error("Failed to clear a registration request: \(error.localizedDescription)")
-        }
-        state = .absent
+    private func cancelRequest(requestId: String) {
+        let service = service
+        Task { try? await service.cancelRequest(requestId: requestId) }
     }
 }
