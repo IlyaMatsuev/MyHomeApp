@@ -16,12 +16,20 @@
       "iconURL": "https://ilyamatsuev.github.io/MyHomeApp/assets/icon.png",
       "tintColor": "4B6EF5",
       "screenshotURLs": [],
-      "version": "0.2",
-      "versionDate": "2026-07-05T23:21:32Z",
-      "versionDescription": "Rename to \"My Home\"",
-      "downloadURL": "https://github.com/IlyaMatsuev/MyHomeApp/releases/download/v0.2/MyHomeApp.ipa",
-      "size": 702057,
+      "version": "0.3",
+      "versionDate": "2026-07-09T23:23:00Z",
+      "versionDescription": "Added new registration flow",
+      "downloadURL": "https://github.com/IlyaMatsuev/MyHomeApp/releases/download/v0.3/MyHomeApp.ipa",
+      "size": 774684,
       "versions": [
+        {
+          "version": "0.3",
+          "date": "2026-07-09T23:23:00Z",
+          "localizedDescription": "Added new registration flow",
+          "downloadURL": "https://github.com/IlyaMatsuev/MyHomeApp/releases/download/v0.3/MyHomeApp.ipa",
+          "size": 774684,
+          "minOSVersion": "18.6"
+        },
         {
           "version": "0.2",
           "date": "2026-07-05T23:21:32Z",
