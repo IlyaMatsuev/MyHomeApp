@@ -2,6 +2,10 @@
   "name": "My Home",
   "identifier": "com.ilyamatsuev.MyHomeAppSource",
   "sourceURL": "https://ilyamatsuev.github.io/MyHomeApp/apps.json",
+  "subtitle": "Ilya's personal apps",
+  "description": "Personal AltSource for MyHomeApp.",
+  "iconURL": "https://ilyamatsuev.github.io/MyHomeApp/assets/icon.png",
+  "tintColor": "4B6EF5",
   "apps": [
     {
       "name": "My Home",
@@ -12,6 +16,11 @@
       "iconURL": "https://ilyamatsuev.github.io/MyHomeApp/assets/icon.png",
       "tintColor": "4B6EF5",
       "screenshotURLs": [],
+      "version": "0.2",
+      "versionDate": "2026-07-05T23:21:32Z",
+      "versionDescription": "Rename to \"My Home\"",
+      "downloadURL": "https://github.com/IlyaMatsuev/MyHomeApp/releases/download/v0.2/MyHomeApp.ipa",
+      "size": 702057,
       "versions": [
         {
           "version": "0.2",

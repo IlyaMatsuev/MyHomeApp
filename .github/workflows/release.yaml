@@ -108,7 +108,12 @@ jobs:
                 downloadURL: $url,
                 size: $size,
                 minOSVersion: "18.6"
-             }] + .)' docs/apps.json > docs/apps.json.tmp
+             }] + .)
+             | .apps[0].version            = $version
+             | .apps[0].versionDate        = $date
+             | .apps[0].versionDescription = $notes
+             | .apps[0].downloadURL        = $url
+             | .apps[0].size               = $size' docs/apps.json > docs/apps.json.tmp
           mv docs/apps.json.tmp docs/apps.json
 
       - name: Commit apps.json bump
