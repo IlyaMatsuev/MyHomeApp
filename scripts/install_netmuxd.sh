@@ -8,15 +8,25 @@
 #   (`<arch>-linux-netmuxd`). netmuxd v0.4.x renamed its release assets to
 #   `netmuxd-<rust-triple>.tar.gz`, so that old URL 404s — curl saves the
 #   "Not Found" page as the binary, and the container's netmuxd exits with
-#   status 127 (FATAL). This script fetches the correct release binary for the
+#   status 127 (FATAL). This script fetches a correct release binary for the
 #   host CPU and drops it in ./bin/netmuxd, which the mounted volume feeds to
 #   the container. The image only re-downloads netmuxd when the file is missing,
 #   so this replacement persists across restarts.
 #
+# Why a pinned version (not "latest"):
+#   The dreth image is built on `debian:bookworm-slim` (glibc 2.36), but every
+#   netmuxd release from v0.3.0 onward is compiled against glibc 2.38, so
+#   "latest" loads but crashes at startup with:
+#     libc.so.6: version `GLIBC_2.38' not found ... (exit status 1)
+#   v0.2.1-try1 is the newest release that still links against <= glibc 2.36
+#   (it needs 2.34), so it's the newest netmuxd that runs on this base image.
+#   Bump NETMUXD_VERSION only if the container's base image ships a newer glibc.
+#
 # Usage:
 #   scripts/install_netmuxd.sh
 #
-# Override the target if auto-detect is wrong (values from netmuxd's releases):
+# Overrides (values from https://github.com/jkcoxson/netmuxd/releases):
+#   NETMUXD_VERSION=v0.3.0 scripts/install_netmuxd.sh
 #   NETMUXD_TRIPLE=aarch64-unknown-linux-gnu scripts/install_netmuxd.sh
 #
 set -euo pipefail
@@ -24,7 +34,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN_DIR="$REPO_ROOT/bin"
 CONTAINER="altserver"
-API="https://api.github.com/repos/jkcoxson/netmuxd/releases/latest"
+NETMUXD_VERSION="${NETMUXD_VERSION:-v0.2.1-try1}"
 
 # Map the host architecture to netmuxd's Rust target triple.
 TRIPLE="${NETMUXD_TRIPLE:-}"
@@ -41,19 +51,9 @@ if [[ -z "$TRIPLE" ]]; then
   esac
 fi
 
-echo "Host arch: $(uname -m) → netmuxd target: $TRIPLE"
+echo "Host arch: $(uname -m) → netmuxd $NETMUXD_VERSION ($TRIPLE)"
 
-# Resolve the matching download URL from the latest release (handles version
-# bumps and asset renames without hardcoding a tag).
-url="$(curl -fsSL "$API" \
-  | grep -o "https://[^\"]*netmuxd-${TRIPLE}[^\"]*\.tar\.gz" \
-  | head -n1 || true)"
-
-if [[ -z "$url" ]]; then
-  echo "Error: could not find a netmuxd asset for '$TRIPLE' in the latest release." >&2
-  echo "Check https://github.com/jkcoxson/netmuxd/releases and set NETMUXD_TRIPLE." >&2
-  exit 1
-fi
+url="https://github.com/jkcoxson/netmuxd/releases/download/${NETMUXD_VERSION}/netmuxd-${TRIPLE}.tar.gz"
 
 echo "Downloading: $url"
 mkdir -p "$BIN_DIR"
