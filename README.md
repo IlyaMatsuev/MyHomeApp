@@ -87,51 +87,46 @@ swiftlint
 swiftlint --fix
 ```
 
-## SideStore
+## AltStore
 
-The app is sideloaded via [SideStore](https://sidestore.io). Free Apple ID; SideStore re-signs on-device.
+The app is sideloaded via [AltStore](https://altstore.io). [AltServer-Linux](https://github.com/NyaMisty/AltServer-Linux) should be installed on an ubuntu server in the same network as other devices.
 
-### Anisette servers list
+### AltServer setup & app installation
 
-[sidestore-anisette-servers.json](sidestore-anisette-servers.json) - entry 1 is the self-hosted server from [docker-compose.yaml](docker-compose.yaml), rest are community fallbacks.
+Run once on the always-on Linux server:
 
-Host it as a **secret gist** on <https://gist.github.com> with filename `sidestore-anisette-servers.json`. Copy the **Raw** URL and paste it in SideStore → Settings → **Anisette Servers**.
+1. Pull AltServer container with netmuxd (used for Wi-Fi refresh):
 
-To update: edit both the file in this repo and the gist (keep the same filename so the raw URL is stable), then refresh in SideStore.
+```bash
+docker compose up -d --build
+```
+
+2. Connect the phone by USB for the first pairing, then run the pairing script:
+
+```bash
+scripts/pair_device.sh -a <apple-id> -p "<password>"
+```
+
+A dedicated sideloading Apple ID is recommended; you'll be prompted for a 2FA code.
+
+3. On the phone: open **AltStore → Settings** → sign in with the same Apple ID.
+
+4. AltStore → **Sources** → **+** → `https://ilyamatsuev.github.io/MyHomeApp/apps.json`.
+5. Open the source → **My Home**
 
 ### GitHub setup
 
-Releases are published as GitHub Releases via a manual workflow. SideStore subscribes to [docs/apps.json](docs/apps.json) served by GitHub Pages and pulls new versions.
+Releases are published as GitHub Releases via a manual workflow. AltStore subscribes to [`https://ilyamatsuev.github.io/MyHomeApp/apps.json`](https://ilyamatsuev.github.io/MyHomeApp/apps.json) - an AltStore source served by GitHub Pages — and pulls new versions.
 
 1. Repo Settings → **Pages** → source = branch `main`, folder `/docs`.
 2. Repo Settings → **Actions → General** → *Workflow permissions* = **Read and write**.
 
-### iPhone setup & app installation
-
-1. Install SideStore per <https://sidestore.io/#get-started>.
-2. SideStore → **Settings** → **Account** → sign in with an [app-specific password](https://support.apple.com/en-us/HT204397). Not your real Apple ID password.
-3. Paste the anisette gist raw URL into Settings → **Anisette Servers** and pick the local server as default.
-4. SideStore → **Sources** → **+** → `https://ilyamatsuev.github.io/MyHomeApp/apps.json`.
-5. Open the source → **MyHome** → **Free Download**.
-
-### Publishing a app new version
-
-Publishing a new version:
+### Publishing a new app version
 
 1. GitHub → **Actions** → **Release IPA** → **Run workflow**. Enter a version like `1.2.0` and optional notes.
-2. On the phone: SideStore → **My Apps** → pull to refresh. Tap **Update**.
+2. On the phone: AltStore → **My Apps** → pull to refresh. Tap **Update**.
 
 Workflow: [.github/workflows/release.yaml](.github/workflows/release.yaml). Manual only (`workflow_dispatch`).
-
-### App Auto-refresh
-
-Free-signed apps expire every 7 days. To re-sign in the background:
-
-1. iOS **Settings → General → Background App Refresh** — global toggle on, SideStore enabled.
-2. SideStore → Settings → **Background Refresh** — enabled, daily interval.
-3. Keep SideStore's WireGuard VPN profile enabled — the on-device signing loopback needs it.
-
-Manual refresh: SideStore → **My Apps** → pull to refresh.
 
 ## License
 

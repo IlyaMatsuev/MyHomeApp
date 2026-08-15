@@ -7,7 +7,7 @@ on:
         description: 'Marketing version (e.g. 1.2.0). Also used as the git tag: v<version>.'
         required: true
       release_notes:
-        description: 'Release notes shown in SideStore and the GitHub release body.'
+        description: 'Release notes shown in AltStore and the GitHub release body.'
         required: false
         default: ''
       prerelease:

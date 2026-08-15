@@ -7,52 +7,45 @@ iOS client for the MyHomeHub. Control your devices, scenarios, and rooms from yo
 ## Before you start
 
 - iPhone running **iOS 18.6** or newer
-- A free **Apple ID**
-- A computer (Mac or PC) — needed **once**, to pair your phone. Everything after that happens on the phone.
+- A free **Apple ID** (a dedicated one for sideloading is recommended)
+- An **always-on computer** to run AltServer. This guide uses a Linux home server so refresh happens without keeping a laptop on; a Mac or PC works too, but must stay awake on the same Wi-Fi.
 
-## Install SideStore
+## Install AltStore
 
-The app is distributed through [SideStore](https://sidestore.io) — a free, on-device signer that installs apps using your own Apple ID. Nothing you install this way leaves your phone.
+The app is distributed through [AltStore](https://altstore.io) — a companion app, **AltServer**, signs it with your own Apple ID and refreshes it before it expires. Nothing you install this way leaves your phone.
 
-1. Follow the official [SideStore setup guide](https://sidestore.io/#get-started) to install SideStore and pair your phone. This is the one step that needs a computer.
-2. Open SideStore → **Settings → Account** and sign in with your Apple ID. Use an [app-specific password](https://support.apple.com/en-us/HT204397), not your real one.
-3. Open **Settings → Anisette Servers** and paste a server list, then pick any server that shows as online. Anisette lets SideStore sign apps with your Apple ID — the built-in default is often down, so a custom list is the reliable fallback. You can use either:
+On an always-on Linux server (recommended), run the dockerized AltServer stack — one container that bundles AltServer, netmuxd (Wi-Fi refresh). In the app repo:
 
-   - The maintainer's curated list (self-hosted server first, then community fallbacks):
+```
+docker compose up -d --build
+```
 
-     ```
-     https://gist.githubusercontent.com/IlyaMatsuev/c3d5181a9260493d8a861bd80506ace4/raw/sidestore-anisette-servers.json
-     ```
+2. Connect the phone by USB for the first pairing, then run the pairing script:
 
-   - Or the public community list:
+```bash
+scripts/pair_device.sh -a <apple-id> -p "<password>"
+```
 
-     ```
-     https://servers.sidestore.io/servers.json
-     ```
+3. Once AltStore is installed, open it and sign in under **Settings** with your Apple ID (you'll get a 2FA prompt).
 
-## Add the My Home source
+## Install My Home
 
-In SideStore, tap **Sources → +** and paste this URL:
+In AltStore, tap **Sources → +** and paste this URL:
 
 ```
 https://ilyamatsuev.github.io/MyHomeApp/apps.json
 ```
 
-## Install the app
-
-1. Open the **My Home** source you just added.
-2. Tap the app → **Free Download**.
-3. Wait for SideStore to sign and install. The app appears on your Home Screen.
+Add the **My Home** source and install the app.
 
 ## Keep the app refreshed
 
-Apps signed with a free Apple ID expire every **7 days**. SideStore renews them automatically in the background — no computer needed:
+Apps signed with a free Apple ID expire every **7 days**. With the `altserver` container left running on the server, AltStore renews them automatically over Wi-Fi:
 
-1. iOS **Settings → General → Background App Refresh** — turn it on globally and for SideStore.
-2. SideStore → **Settings → Background Refresh** — enable it, set a daily interval.
-3. Keep SideStore's WireGuard VPN profile enabled — on-device signing needs it.
+1. Keep the `altserver` container running and the phone on the same Wi-Fi/subnet as the server.
+2. iOS **Settings → General → Background App Refresh** — turn it on globally and for AltStore.
 
-> If a refresh fails, open SideStore → **My Apps** and pull down to refresh manually.
+> If a refresh fails, open AltStore → **My Apps** and pull down to refresh manually.
 
 ## Updates
 
@@ -60,4 +53,6 @@ New versions show up automatically in **My Apps** — pull to refresh and tap **
 
 ---
 
-Source code: [github.com/IlyaMatsuev/MyHomeApp](https://github.com/IlyaMatsuev/MyHomeApp) · Licensed under [PolyForm Noncommercial](https://github.com/IlyaMatsuev/MyHomeApp/blob/main/LICENSE).
+Source code: [github.com/IlyaMatsuev/MyHomeApp](https://github.com/IlyaMatsuev/MyHomeApp)
+
+Licensed under [PolyForm Noncommercial](https://github.com/IlyaMatsuev/MyHomeApp/blob/main/LICENSE).
