@@ -98,7 +98,7 @@ Run once on the always-on Linux server:
 1. Install the AltServer:
 
 ```bash
-scripts/install_altserver.sh
+sudo scripts/install_altserver.sh
 ```
 
 2. Connect the phone by USB for the first pairing, then run the pairing script:

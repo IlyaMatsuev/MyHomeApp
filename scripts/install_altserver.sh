@@ -7,7 +7,7 @@
 # Run once on the linux server
 #
 # Usage:
-#   scripts/install_altserver.sh
+#   sudo scripts/install_altserver.sh
 #
 set -euo pipefail
 
@@ -26,4 +26,4 @@ echo "==> Installing netmuxd..."
 "$SCRIPT_DIR/install_netmuxd.sh"
 
 echo "==> AltServer is up. Pair a device with:"
-echo "    scripts/pair_device.sh -a <apple-id> -p \"<password>\""
+echo "    sudo scripts/pair_device.sh -a <apple-id> -p \"<password>\""
