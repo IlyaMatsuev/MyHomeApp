@@ -26,4 +26,4 @@ echo "==> Installing netmuxd..."
 "$SCRIPT_DIR/install_netmuxd.sh"
 
 echo "==> AltServer is up. Pair a device with:"
-echo "    sudo scripts/pair_device.sh -a <apple-id> -p \"<password>\""
+echo "    scripts/install_altstore.sh -a <apple-id> -p \"<password>\""

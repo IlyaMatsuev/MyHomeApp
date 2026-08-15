@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# pair_device.sh — pair a connected iPhone and install AltStore through the dockerized AltServer-Linux container
+# install_altstore.sh — pair a connected iPhone and install AltStore through the dockerized AltServer-Linux container
 
 set -euo pipefail
 
@@ -16,7 +16,7 @@ usage() {
 Pair a connected iPhone and install AltStore
 
 Usage:
-  scripts/pair_device.sh -a <apple-id> -p <password> [-u <device-udid>]
+  scripts/install_altstore.sh -a <apple-id> -p <password> [-u <device-udid>]
 
   -a  Apple ID (email) used to sign AltStore   Required
   -p  Apple ID password                        Required (prompted if omitted)
@@ -28,12 +28,10 @@ EOF
 }
 
 find_udid_hint() {
-  cat >&2 <<'EOF'
-Find a UDID manually with any of:
-  idevice_id -l                 # libimobiledevice (brew install libimobiledevice)
-  xcrun xctrace list devices    # shown in parentheses next to the device
-  # Finder → select your iPhone → click the info line under its name (it cycles to the UDID); right-click to copy.
-Then pass it explicitly:  scripts/pair_device.sh -a <apple-id> -p <password> -u <udid>
+  cat >&2 <<EOF
+Find the UDID via the AltServer container (that's where usbmuxd runs):
+  docker exec $CONTAINER idevice_id -l
+Then pass it explicitly:  scripts/install_altstore.sh -a <apple-id> -u <udid>
 EOF
 }
 
@@ -61,36 +59,31 @@ if [[ -z "$PASSWORD" ]]; then
   [[ -z "$PASSWORD" ]] && { echo "Error: password is required." >&2; exit 1; }
 fi
 
-# Auto-detect the device UDID when -u is not given.
-if [[ -z "$UDID" ]]; then
-  if ! command -v idevice_id >/dev/null 2>&1; then
-    echo "Error: -u not given and \`idevice_id\` is not installed, so the UDID cannot be auto-detected." >&2
-    echo "Install it with: brew install libimobiledevice" >&2
-    find_udid_hint
-    exit 1
-  fi
-
-  UDID="$(idevice_id -l 2>/dev/null | head -n1 || true)"
-
-  if [[ -z "$UDID" ]]; then
-    echo "Error: no connected iPhone found." >&2
-    echo "  - Use a data USB cable (not charge-only) into a direct port." >&2
-    echo "  - Unlock the phone and tap \"Trust This Computer\" (enter passcode)." >&2
-    find_udid_hint
-    exit 1
-  fi
-
-  if [[ "$(idevice_id -l 2>/dev/null | grep -c .)" -gt 1 ]]; then
-    echo "Warning: multiple devices connected; using the first: $UDID" >&2
-    echo "         Pass -u <device-udid> to target a specific one." >&2
-  fi
-fi
-
-# Make sure the AltServer container is actually up.
+# Make sure the AltServer container is up — we detect and pair through it.
 if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
   echo "Error: container '$CONTAINER' is not running. Start it with:" >&2
   echo "  sudo scripts/install_altserver.sh" >&2
   exit 1
+fi
+
+# Auto-detect the device UDID when -u is not given. usbmuxd runs inside the
+# container (the host has none), so ask the container, not the host.
+if [[ -z "$UDID" ]]; then
+  UDID="$(docker exec "$CONTAINER" idevice_id -l 2>/dev/null | head -n1 || true)"
+
+  if [[ -z "$UDID" ]]; then
+    echo "Error: no iPhone detected by the '$CONTAINER' container." >&2
+    echo "  - Use a data USB cable (not charge-only) straight into the server (no hubs)." >&2
+    echo "  - Unlock the phone and tap \"Trust This Computer\" (enter passcode)." >&2
+    echo "  - Re-check with: docker exec $CONTAINER idevice_id -l" >&2
+    find_udid_hint
+    exit 1
+  fi
+
+  if [[ "$(docker exec "$CONTAINER" idevice_id -l 2>/dev/null | grep -c .)" -gt 1 ]]; then
+    echo "Warning: multiple devices connected; using the first: $UDID" >&2
+    echo "         Pass -u <device-udid> to target a specific one." >&2
+  fi
 fi
 
 echo "Pairing and installing AltStore on device: $UDID"

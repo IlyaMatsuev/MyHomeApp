@@ -25,8 +25,10 @@ sudo scripts/install_altserver.sh
 2. Connect the phone by USB for the first pairing, then run the pairing script:
 
 ```bash
-scripts/pair_device.sh -a <apple-id> -p "<password>"
+scripts/install_altstore.sh -a <apple-id> -p "<password>"
 ```
+
+> **First-pairing tips:** use a proper **data** cable plugged **straight into the server** (no hubs or docks), and keep the phone **unlocked** — tap **Trust This Computer** and enter your passcode when prompted. Confirm it's seen with `docker exec altserver idevice_id -l` (should print the UDID) before running the script. A charge-only or flaky cable is the usual reason a phone won't pair.
 
 3. Once AltStore is installed, open it on your phone and sign in under **Settings** with your Apple ID (you'll get a 2FA prompt).
 

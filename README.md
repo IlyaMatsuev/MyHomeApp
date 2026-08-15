@@ -104,7 +104,7 @@ sudo scripts/install_altserver.sh
 2. Connect the phone by USB for the first pairing, then run the pairing script:
 
 ```bash
-scripts/pair_device.sh -a <apple-id> -p "<password>"
+scripts/install_altstore.sh -a <apple-id> -p "<password>"
 ```
 
 A dedicated sideloading Apple ID is recommended; you'll be prompted for a 2FA code.
@@ -113,6 +113,31 @@ A dedicated sideloading Apple ID is recommended; you'll be prompted for a 2FA co
 
 4. AltStore → **Sources** → **+** → `https://ilyamatsuev.github.io/MyHomeApp/apps.json`.
 5. Open the source → **My Home**
+
+### If the phone isn't detected
+
+The one-time USB pairing is the only fussy part. AltServer reaches the phone through the container's `usbmuxd`; if `install_altstore.sh` can't find the device, work through these in order:
+
+1. **Use a real data cable, plugged straight into the server** — no hubs, docks, or extension cables. A charge-only or failing cable is the most common cause: the phone shows up in `lsusb` and even reports its serial, but `lockdownd` pairing fails (`lockdown error -8` in the logs). Swapping the cable/port fixes this more often than anything else.
+2. **Unlock the phone and tap "Trust This Computer"** (enter the passcode). iOS blocks USB data while the phone is locked, so keep the screen unlocked throughout pairing.
+3. **Verify the container sees the phone:**
+
+```bash
+# prints the device UDID
+docker exec altserver idevice_id -l         
+# prints SUCCESS once trusted
+docker exec altserver idevicepair validate
+```
+
+If `idevice_id -l` is empty, re-seat (or swap) the cable, re-enumerate, and give it a few seconds:
+
+```bash
+docker exec altserver supervisorctl restart usbmuxd && sleep 15 && docker exec altserver idevice_id -l
+```
+
+> Note: the container runs its **own** `usbmuxd` (visible on the host as `usbmuxd -f -v`). That's expected - don't kill it. USB access is granted by the `device_cgroup_rules` entry in [docker-compose.yaml](docker-compose.yaml); without it `usbmuxd` can see the phone but can't open it (`errno=1`).
+
+Once `idevicepair validate` returns `SUCCESS`, run `install_altstore.sh`. The pairing record persists on the server (`/var/lib/lockdown`), so after this one-time USB step every future refresh happens over Wi-Fi — no cable needed.
 
 ### GitHub setup
 
