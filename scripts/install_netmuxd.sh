@@ -57,8 +57,16 @@ fi
 
 echo "Downloading: $url"
 mkdir -p "$BIN_DIR"
-curl -fsSL "$url" | tar -xz -C "$BIN_DIR" netmuxd
-chmod +x "$BIN_DIR/netmuxd"
+
+# Extract to a temp file in the same dir, then atomically replace. Rename works
+# even while the container is currently executing the old netmuxd (it keeps the
+# old inode until it restarts), and it makes re-runs idempotent — extracting in
+# place would fail because the file already exists / is busy.
+tmp="$(mktemp "$BIN_DIR/netmuxd.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
+curl -fsSL "$url" | tar -xzO netmuxd > "$tmp"
+chmod +x "$tmp"
+mv -f "$tmp" "$BIN_DIR/netmuxd"
 echo "Installed: $BIN_DIR/netmuxd"
 
 # Restart the container so supervisord picks up the new binary.
