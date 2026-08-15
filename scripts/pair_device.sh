@@ -89,7 +89,7 @@ fi
 # Make sure the AltServer container is actually up.
 if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
   echo "Error: container '$CONTAINER' is not running. Start it with:" >&2
-  echo "  docker compose up -d --build" >&2
+  echo "  scripts/install_altserver.sh" >&2
   exit 1
 fi
 

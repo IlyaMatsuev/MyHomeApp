@@ -14,10 +14,12 @@ iOS client for the MyHomeHub. Control your devices, scenarios, and rooms from yo
 
 The app is distributed through [AltStore](https://altstore.io) — a companion app, **AltServer**, signs it with your own Apple ID and refreshes it before it expires. Nothing you install this way leaves your phone.
 
-On an always-on Linux server (recommended), run the dockerized AltServer stack — one container that bundles AltServer, netmuxd (Wi-Fi refresh). In the app repo:
+### On the server:
 
-```
-docker compose up -d --build
+1. Install the AltServer:
+
+```bash
+scripts/install_altserver.sh
 ```
 
 2. Connect the phone by USB for the first pairing, then run the pairing script:
@@ -26,7 +28,7 @@ docker compose up -d --build
 scripts/pair_device.sh -a <apple-id> -p "<password>"
 ```
 
-3. Once AltStore is installed, open it and sign in under **Settings** with your Apple ID (you'll get a 2FA prompt).
+3. Once AltStore is installed, open it on your phone and sign in under **Settings** with your Apple ID (you'll get a 2FA prompt).
 
 ## Install My Home
 

@@ -95,10 +95,10 @@ The app is sideloaded via [AltStore](https://altstore.io). [AltServer-Linux](htt
 
 Run once on the always-on Linux server:
 
-1. Pull AltServer container with netmuxd (used for Wi-Fi refresh):
+1. Install the AltServer:
 
 ```bash
-docker compose up -d --build
+scripts/install_altserver.sh
 ```
 
 2. Connect the phone by USB for the first pairing, then run the pairing script:
