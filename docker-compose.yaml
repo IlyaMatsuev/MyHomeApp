@@ -9,6 +9,9 @@ services:
     restart: always
     # Required for mDNS
     network_mode: host
+    # Grant permission to OPEN the USB device nodes
+    device_cgroup_rules:
+      - 'c 189:* rmw'
     environment:
       - ALLOW_PROVISION_TO_DOWNLOAD_LIBS=true
       # Uncomment and set if architecture auto-detect is wrong (x86_64 / aarch64):

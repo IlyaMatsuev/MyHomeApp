@@ -73,7 +73,7 @@ echo "Installed: $BIN_DIR/netmuxd"
 if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
   echo "Restarting '$CONTAINER'…"
   (cd "$REPO_ROOT" && docker compose restart "$CONTAINER")
-  echo "Done. Verify with: docker compose logs --tail=20 $CONTAINER | grep -i netmuxd"
+  echo "Done."
 else
   echo "Container '$CONTAINER' is not running yet - start it with:"
   echo "  docker compose up -d --build"
