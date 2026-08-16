@@ -66,6 +66,27 @@ if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
   exit 1
 fi
 
+# The stock AltServer signs with ldid, whose signature iOS 26 rejects - the
+# install reports success and the app crashes instantly on launch. Installing
+# the signer is install_altserver.sh's job; this just refuses to sign with a
+# setup that would produce a broken app.
+signer_problem=""
+if ! docker exec "$CONTAINER" test -x /altserver/bin/rcodesign; then
+  signer_problem="rcodesign is missing from the container"
+elif ! docker exec "$CONTAINER" printenv ALTSERVER_RCODESIGN >/dev/null 2>&1; then
+  signer_problem="ALTSERVER_RCODESIGN is unset - the container predates it and needs a recreate"
+elif ! docker exec "$CONTAINER" sh -c 'command -v openssl >/dev/null 2>&1'; then
+  signer_problem="openssl is missing from the container"
+fi
+
+if [[ -n "$signer_problem" ]]; then
+  echo "Error: $signer_problem." >&2
+  echo "  Apps signed without it install fine and crash instantly on iOS 26." >&2
+  echo "  Set the signer up, then re-run this:" >&2
+  echo "    sudo scripts/install_altserver.sh" >&2
+  exit 1
+fi
+
 # Auto-detect the device UDID when -u is not given. usbmuxd runs inside the
 # container (the host has none), so ask the container, not the host.
 if [[ -z "$UDID" ]]; then

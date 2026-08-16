@@ -139,6 +139,25 @@ docker exec altserver supervisorctl restart usbmuxd && sleep 15 && docker exec a
 
 Once `idevicepair validate` returns `SUCCESS`, run `install_altstore.sh`. The pairing record persists on the server (`/var/lib/lockdown`), so after this one-time USB step every future refresh happens over Wi-Fi — no cable needed.
 
+### If the app installs but crashes on launch (iOS 26)
+
+Upstream AltServer-Linux signs with a vendored `ldid` from ~2022. On **iOS 26.4+** the kernel's TXM rejects that signature, so the install reports `Installation Succeeded` and the app dies instantly on launch with no crash report ([AltServer-Linux#131](https://github.com/NyaMisty/AltServer-Linux/issues/131)). The rejected parts are ldid's DER entitlements schema, its SHA-1-primary CodeDirectory, its empty designated requirements, and its old CodeResources format.
+
+[install_ios26_signer.sh](scripts/install_ios26_signer.sh) fixes this by installing a [patched AltServer](https://github.com/ondrej-simon/AltServer-Linux) that signs with [`rcodesign`](https://github.com/indygreg/apple-platform-rs) instead of ldid - everything else (Apple auth, certificate, provisioning, install) is unchanged. `install_altserver.sh` runs it, so **repairing an existing setup is the normal two-step setup above** — re-run it, then pair again:
+
+```bash
+sudo scripts/install_altserver.sh
+scripts/install_altstore.sh -a <apple-id> -p "<password>"
+```
+
+Delete AltStore from the phone first. AltServer signs every app it installs and refreshes, so this applies to **My Home** too — an app installed through a broken AltServer keeps crashing until it's re-signed by the patched one.
+
+Confirm the container picked it up - the install log should print `rcodesign signing: ...`:
+
+```bash
+docker exec altserver /altserver/bin/rcodesign --version
+```
+
 ### GitHub setup
 
 Releases are published as GitHub Releases via a manual workflow. AltStore subscribes to [`https://ilyamatsuev.github.io/MyHomeApp/apps.json`](https://ilyamatsuev.github.io/MyHomeApp/apps.json) - an AltStore source served by GitHub Pages — and pulls new versions.

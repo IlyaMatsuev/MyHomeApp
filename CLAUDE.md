@@ -129,7 +129,7 @@ If `iPhone 13 mini` isn't available, check `xcrun simctl list devices available`
 - Group related tests with `// MARK: -` dividers (e.g. `// MARK: - load() — grouping`). They show up in Xcode's jump bar and minimap.
 - Use `#expect(a == b)` for assertions, `#expect(a == b, "message")` to attach context, and `try #require(...)` for **preconditions** the rest of the test depends on — unwrap optionals through `#require`, never through `?` chains or `?? default` inside an `#expect`. `#expect(optional?.x == y)` fails with a confusing boolean message when the optional is `nil`; `#expect(optional ?? sentinel == y)` can pass *vacuously* when `sentinel` happens to equal `y`. Both are silent ways for a broken test to feel fine.
 - Use the fluent `Device.fixture()` builder for test devices, not raw `Device(...)` initializers. The builder lives in `MyHomeAppTests/Mocks/Device+Fixture.swift` and exposes semantic methods (`newDevice(...)`, `inRoom(_:)`, `asTuya(...)`, `asZigbee(...)`, `withControls(...)`, etc.).
-- Mock service classes conforming to a `Sendable` protocol use `final class … : Protocol, @unchecked Sendable`. Tests serialize their own access.
+- Mock service classes conforming to a `Sendable` protocol use `final class ... : Protocol, @unchecked Sendable`. Tests serialize their own access.
 - Test suites that touch a `@MainActor` ViewModel are themselves `@MainActor` (annotate the `struct`). The ViewModel reference can stay `let` even when the test mutates its properties — it's a reference type.
 
 ## Agent workflow

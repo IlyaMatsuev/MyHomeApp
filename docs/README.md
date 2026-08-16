@@ -32,6 +32,8 @@ scripts/install_altstore.sh -a <apple-id> -p "<password>"
 
 3. Once AltStore is installed, open it on your phone and sign in under **Settings** with your Apple ID (you'll get a 2FA prompt).
 
+> **On iOS 26?** If an installed app closes the instant you tap it, it was signed by an older AltServer whose signature iOS 26 rejects. Delete the app, re-run step 1 (it installs an iOS 26 compatible signer), then step 2.
+
 ## Install My Home
 
 In AltStore, tap **Sources → +** and paste this URL:

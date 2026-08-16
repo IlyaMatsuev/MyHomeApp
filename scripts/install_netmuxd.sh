@@ -71,7 +71,7 @@ echo "Installed: $BIN_DIR/netmuxd"
 
 # Restart the container so supervisord picks up the new binary.
 if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
-  echo "Restarting '$CONTAINER'…"
+  echo "Restarting '$CONTAINER'..."
   (cd "$REPO_ROOT" && docker compose restart "$CONTAINER")
   echo "Done."
 else

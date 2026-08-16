@@ -14,6 +14,8 @@ services:
       - 'c 189:* rmw'
     environment:
       - ALLOW_PROVISION_TO_DOWNLOAD_LIBS=true
+      # iOS 26: the patched AltServer signs with rcodesign instead of ldid. See scripts/install_ios26_signer.sh.
+      - ALTSERVER_RCODESIGN=/altserver/bin/rcodesign
       # Uncomment and set if architecture auto-detect is wrong (x86_64 / aarch64):
       # - OVERRIDE_ALTSERVER_ARCH=x86_64
       # - OVERRIDE_NETMUXD_ARCH=x86_64

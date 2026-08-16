@@ -95,7 +95,7 @@ The app follows MVVM with SwiftUI:
 | ----------- | --------------------------------------------- |
 | `Core/`     | Shared models, networking, persistence        |
 | `Shared/`   | Reusable UI components, modifiers, extensions |
-| `Screens/`  | Feature screens (Home, Devices, Scenarios…)   |
+| `Screens/`  | Feature screens (Home, Devices, Scenarios...)   |
 
 ## Running
 
