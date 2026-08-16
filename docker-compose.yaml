@@ -12,6 +12,16 @@ services:
     # Grant permission to OPEN the USB device nodes
     device_cgroup_rules:
       - 'c 189:* rmw'
+    # AltServer advertises itself over Bonjour (_altserver._tcp) by talking to
+    # the host's avahi through the shared /var/run D-Bus socket - that's how
+    # AltStore finds it on the network. Docker's default AppArmor profile has
+    # no dbus rules, and AppArmor's D-Bus mediation denies what it doesn't
+    # allow, so the connection is blocked at the initial `Hello` call:
+    #   apparmor="DENIED" operation="dbus_method_call" member="Hello"
+    #     label="docker-default"
+    # AltStore then reports "AltServer is not found" for sign-in and installs.
+    security_opt:
+      - apparmor:unconfined
     environment:
       - ALLOW_PROVISION_TO_DOWNLOAD_LIBS=true
       # iOS 26: the patched AltServer signs with rcodesign instead of ldid. See scripts/install_ios26_signer.sh.

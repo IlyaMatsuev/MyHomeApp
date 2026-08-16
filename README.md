@@ -139,6 +139,33 @@ docker exec altserver supervisorctl restart usbmuxd && sleep 15 && docker exec a
 
 Once `idevicepair validate` returns `SUCCESS`, run `install_altstore.sh`. The pairing record persists on the server (`/var/lib/lockdown`), so after this one-time USB step every future refresh happens over Wi-Fi — no cable needed.
 
+### If AltStore says "AltServer is not found"
+
+Sign-in and installing from a source both go through AltServer over the network — only the initial USB install bypasses it. AltStore finds the server by browsing for the `_altserver._tcp` Bonjour service, which AltServer publishes through **the host's** avahi via the shared `/var/run` D-Bus socket. Two things have to be true on the server:
+
+```bash
+sudo apt install -y avahi-daemon avahi-utils && sudo systemctl enable --now avahi-daemon
+sudo systemctl disable --now usbmuxd   # the container runs its own
+```
+
+The container's own `avahi-daemon` never starts — the host daemon already owns `org.freedesktop.Avahi` — and that's fine; publishing goes through the host's.
+
+Check what's actually advertised (skip `-t`: with a cold cache it terminates on an empty dump):
+
+```bash
+avahi-browse -r _altserver._tcp
+```
+
+Nothing listed, while the host's own mDNS works (`avahi-browse -at` shows other devices)? Look for AppArmor blocking the container's D-Bus:
+
+```bash
+sudo dmesg | grep -i 'apparmor.*DENIED.*dbus'
+```
+
+A denial on `member="Hello"` with `label="docker-default"` means Docker's default AppArmor profile is blocking the system bus — it grants `file`, `network` and `capability` but no `dbus` rules, and D-Bus mediation denies what isn't allowed. The `security_opt: apparmor:unconfined` entry in [docker-compose.yaml](docker-compose.yaml) is what lifts it; it needs a recreate (`sudo scripts/install_altserver.sh`), not a restart.
+
+On the phone: **Settings → AltStore → Local Network** must be on, on the same subnet as the server, with no VPN or iCloud Private Relay.
+
 ### If the app installs but crashes on launch (iOS 26)
 
 Upstream AltServer-Linux signs with a vendored `ldid` from ~2022. On **iOS 26.4+** the kernel's TXM rejects that signature, so the install reports `Installation Succeeded` and the app dies instantly on launch with no crash report ([AltServer-Linux#131](https://github.com/NyaMisty/AltServer-Linux/issues/131)). The rejected parts are ldid's DER entitlements schema, its SHA-1-primary CodeDirectory, its empty designated requirements, and its old CodeResources format.
