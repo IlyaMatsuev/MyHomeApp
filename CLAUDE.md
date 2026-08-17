@@ -61,6 +61,13 @@ MVVM with SwiftUI:
 - **ViewModels** are `@Observable` `@MainActor` classes that own state. Inject dependencies via initializer with sensible defaults (`init(service: FooServiceProtocol = FooService.shared)`).
 - **Services** expose a `protocol` + concrete implementation. Tests mock the protocol; production uses the concrete type.
 - **Models** are `struct`s. Use `Codable`/`Identifiable`/`Equatable`/`Hashable` as needed.
+- **Editors use a draft model.** When a screen edits a wire model that is immutable, enum-shaped, or keyed by
+  something that isn't a stable list identity, add a `FooDraft` next to the screen: flat, `var`-based, rows
+  carry a `UUID`, with `init(foo:)` in and a `payload` out. `Screens/Scenarios/ScenarioDraft.swift` is the
+  reference. Don't bend the wire model into a form model.
+- **Wire vocabularies the hub owns stay open.** Fields whose values the hub can extend at will (e.g. a
+  scenario's `group`) are transparent string wrappers, not closed enums, so an unknown value can't fail
+  decoding of a whole page. Closed enums are for vocabularies the app genuinely knows in full.
 
 The full conventions are in [.claude/agents/implementer.md](.claude/agents/implementer.md) and [.claude/agents/reviewer.md](.claude/agents/reviewer.md).
 
