@@ -2,17 +2,28 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(SessionStore.self) private var sessionStore
+    @Environment(MediaSettingsStore.self) private var mediaSettingsStore
+    @Environment(\.mediaService) private var mediaService
 
     var body: some View {
-        ZStack {
-            Color("BackgroundPrimary")
-                .ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                Color("BackgroundPrimary")
+                    .ignoresSafeArea()
 
-            VStack {
-                Spacer()
-                logoutButton
+                VStack(spacing: 24) {
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            MediaManagerSection(store: mediaSettingsStore, service: mediaService)
+                        }
+                    }
+                    .scrollDismissesKeyboard(.interactively)
+
+                    logoutButton
+                }
+                .padding(24)
             }
-            .padding(24)
+            .navigationTitle("Settings")
         }
     }
 
@@ -32,5 +43,9 @@ struct SettingsView: View {
 
 #Preview {
     let sessionStore = SessionStore(service: MockAuthService(), tokenStore: InMemoryTokenStore())
-    return SettingsView().environment(sessionStore)
+    let mediaSettingsStore = MediaSettingsStore(persistence: InMemoryMediaSettingsPersistence())
+    return SettingsView()
+        .environment(sessionStore)
+        .environment(mediaSettingsStore)
+        .environment(\.mediaService, MockMediaService(operationDelay: .milliseconds(300)))
 }
