@@ -39,6 +39,7 @@ MyHomeApp/
 └── Screens/                         # Feature screens
     ├── Home/
     ├── Devices/
+    ├── Media/
     ├── Scenarios/
     └── Settings/
 
@@ -61,6 +62,11 @@ MVVM with SwiftUI:
 - **ViewModels** are `@Observable` `@MainActor` classes that own state. Inject dependencies via initializer with sensible defaults (`init(service: FooServiceProtocol = FooService.shared)`).
 - **Services** expose a `protocol` + concrete implementation. Tests mock the protocol; production uses the concrete type.
 - **Models** are `struct`s. Use `Codable`/`Identifiable`/`Equatable`/`Hashable` as needed.
+
+The app talks to two backends: the **hub** (default target of `HubAPIClient`) and the optional **Media Manager**
+(`Core/Media/`). Both authorize with the same hub access token, so a second backend is just a different target
+address — send its requests through the shared client with `send(_:to:)` instead of adding another HTTP stack.
+The Media Manager address lives in `MediaSettingsStore`, which also decides whether the Media tab is shown.
 
 The full conventions are in [.claude/agents/implementer.md](.claude/agents/implementer.md) and [.claude/agents/reviewer.md](.claude/agents/reviewer.md).
 

@@ -4,6 +4,7 @@ struct RootView: View {
     @Environment(SessionStore.self) private var sessionStore
     @Environment(ServerConfigStore.self) private var serverConfigStore
     @Environment(RegistrationStore.self) private var registrationStore
+    @Environment(MediaSettingsStore.self) private var mediaSettingsStore
 
     @State private var displayStage: Stage = .loading
 
@@ -31,6 +32,8 @@ struct RootView: View {
         }
         .task {
             await serverConfigStore.load()
+            // Loaded before the session so the Media tab visibility is known by the time the main screen shows up
+            await mediaSettingsStore.load()
             await sessionStore.load()
             await registrationStore.load()
         }
@@ -67,6 +70,7 @@ struct RootView: View {
         .environment(sessionStore)
         .environment(registrationStore)
         .environment(serverConfigStore)
+        .environment(MediaSettingsStore(persistence: InMemoryMediaSettingsPersistence()))
 }
 
 #Preview("Unconfigured (live)") {
@@ -88,6 +92,7 @@ struct RootView: View {
         .environment(sessionStore)
         .environment(registrationStore)
         .environment(serverConfigStore)
+        .environment(MediaSettingsStore(persistence: InMemoryMediaSettingsPersistence()))
         .environment(\.serverConfigService, serverConfigService)
 }
 
@@ -103,4 +108,5 @@ struct RootView: View {
         .environment(sessionStore)
         .environment(registrationStore)
         .environment(serverConfigStore)
+        .environment(MediaSettingsStore(persistence: InMemoryMediaSettingsPersistence()))
 }
