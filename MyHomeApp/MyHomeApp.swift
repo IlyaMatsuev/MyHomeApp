@@ -8,6 +8,7 @@ struct MyHomeApp: App {
     private let registrationStore: RegistrationStore
     private let serverConfigService: any ServerConfigService
     private let deviceService: any DeviceService
+    private let scenarioService: any ScenarioService
 
     init() {
         let serverConfigStore = ServerConfigStore(persistence: UserDefaultsServerConfigPersistence())
@@ -29,6 +30,7 @@ struct MyHomeApp: App {
         )
         self.serverConfigService = HubServerConfigService(client: apiClient)
         self.deviceService = HubDeviceService(client: apiClient)
+        self.scenarioService = HubScenarioService(client: apiClient)
     }
 
     var body: some Scene {
@@ -40,6 +42,7 @@ struct MyHomeApp: App {
                 .environment(registrationStore)
                 .environment(\.serverConfigService, serverConfigService)
                 .environment(\.deviceService, deviceService)
+                .environment(\.scenarioService, scenarioService)
                 .environment(toastStore)
         }
     }
