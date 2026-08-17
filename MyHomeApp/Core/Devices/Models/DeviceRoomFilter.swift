@@ -1,4 +1,4 @@
-enum DeviceRoomFilter: Equatable {
+enum DeviceRoomFilter: Hashable {
     case all
     case specific(DeviceRoom)
 }
