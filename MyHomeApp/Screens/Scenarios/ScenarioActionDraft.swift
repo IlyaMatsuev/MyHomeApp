@@ -2,20 +2,17 @@ import Foundation
 import AnyCodable
 
 /// Editor-side representation of one `ScenarioAction`.
-///
-/// Carries a `UUID` because several actions may target the same device, which makes the
-/// device id unusable as a `ForEach` identity.
 struct ScenarioActionDraft: Identifiable, Hashable {
     static let defaultControlKey = "on"
 
-    let id = UUID()
+    let draftId = UUID()
+
+    var id: UUID { draftId }
 
     var deviceId: String
     var controlKey: String
     var value: Bool
 
-    /// Measurement setters the editor has no UI for, carried through so editing a scenario
-    /// created elsewhere doesn't drop them.
     private let measurements: [String: AnyCodable]
 
     var isValid: Bool {

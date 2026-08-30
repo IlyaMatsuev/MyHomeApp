@@ -28,7 +28,9 @@ struct ScenarioSourceDraft: Identifiable, Hashable {
     static let defaultCommandKey = "action"
     static let defaultControlKey = "on"
 
-    let id = UUID()
+    let draftId = UUID()
+
+    var id: UUID { draftId }
 
     var kind: ScenarioTriggerSource.Kind
 
