@@ -55,14 +55,26 @@ final class DevicesViewModel {
     func load() async {
         state = .loading
         do {
-            // TODO: Need to query all devices, or implement lazy loading or something
-            let devicesPage = try await service.fetchDevices()
-            roomGroups = Self.group(devicesPage.items)
-            state = .loaded
+            try await fetchDevices()
         } catch {
             state = .failed(error.localizedDescription)
             toastStore.error(errorMessage(for: error))
         }
+    }
+
+    func refresh() async {
+        do {
+            try await fetchDevices()
+        } catch {
+            toastStore.error(errorMessage(for: error))
+        }
+    }
+
+    private func fetchDevices() async throws {
+        // TODO: Need to query all devices, or implement lazy loading or something
+        let devicesPage = try await service.fetchDevices()
+        roomGroups = Self.group(devicesPage.items)
+        state = .loaded
     }
 
     func isLoading(_ device: Device) -> Bool {
