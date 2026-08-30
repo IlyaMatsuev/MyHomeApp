@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(\.deviceService) private var deviceService
+    @Environment(\.scenarioService) private var scenarioService
     @Environment(ToastStore.self) private var toastStore
 
     var body: some View {
@@ -13,6 +14,10 @@ struct ContentView: View {
                 DevicesView(service: deviceService, toastStore: toastStore)
                     .tabItem {
                         Label("Devices", systemImage: "lightbulb.fill")
+                    }
+                ScenariosView(service: scenarioService, deviceService: deviceService, toastStore: toastStore)
+                    .tabItem {
+                        Label("Scenarios", systemImage: "wand.and.stars")
                     }
                 SettingsView()
                     .tabItem {

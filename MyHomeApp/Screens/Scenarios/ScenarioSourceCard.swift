@@ -1,0 +1,163 @@
+import SwiftUI
+
+struct ScenarioSourceCard: View {
+    let viewModel: ScenarioEditorViewModel
+    @Binding var source: ScenarioSourceDraft
+
+    let number: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            header
+
+            switch source.kind {
+            case .cron:
+                cronFields
+
+            case .device:
+                deviceFields
+            }
+        }
+        .padding(12)
+        .background(Color("BackgroundSecondary"))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var header: some View {
+        HStack(spacing: 8) {
+            Text("\(number)")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Color("TextPrimary"))
+                .frame(width: 22, height: 22)
+                .background(Circle().fill(Color("AccentPrimary")))
+
+            Label(source.kind.label, systemImage: source.kind.iconSystemName)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color("TextPrimary"))
+
+            Spacer()
+
+            Button {
+                viewModel.removeSource(source)
+            } label: {
+                Image(systemName: "trash")
+                    .foregroundStyle(Color("Danger"))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Remove trigger \(number)")
+        }
+    }
+
+    private var cronFields: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Picker("Runs at", selection: $source.adjustTo) {
+                Text("Exact time").tag(ScenarioSolarAdjustment?.none)
+                ForEach(ScenarioSolarAdjustment.allCases) { adjustment in
+                    Text(adjustment.label).tag(Optional(adjustment))
+                }
+            }
+            .tint(Color("AccentPrimary"))
+
+            if source.adjustTo == nil {
+                FormTextField(
+                    title: "Cron expression",
+                    placeholder: ScenarioSourceDraft.defaultCron,
+                    text: $source.cron,
+                    isMonospaced: true
+                )
+
+                Text("minute hour day-of-month month day-of-week")
+                    .font(.caption2)
+                    .foregroundStyle(Color("TextSecondary"))
+            }
+        }
+    }
+
+    private var deviceFields: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ScenarioDevicePicker(
+                devices: viewModel.devices,
+                selectedDeviceId: source.deviceId,
+                onSelect: { viewModel.selectDevice($0, forSource: source) }
+            )
+
+            Picker("Match", selection: matchKindBinding) {
+                ForEach(ScenarioSourceDraft.MatchKind.allCases) { matchKind in
+                    Text(matchKind.label).tag(matchKind)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            switch source.matchKind {
+            case .command:
+                commandFields
+
+            case .control:
+                controlFields
+
+            case .measurement:
+                measurementFields
+            }
+        }
+    }
+
+    private var commandFields: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            FormTextField(title: "Command name", placeholder: "action", text: $source.matchKey)
+            FormTextField(title: "Command value", placeholder: "up_press", text: $source.matchText)
+        }
+    }
+
+    private var controlFields: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            keyField(
+                title: "Control name",
+                placeholder: "on",
+                keys: viewModel.toggleControlKeys(ofDeviceId: source.deviceId)
+            )
+
+            Toggle("Is on", isOn: $source.matchValue)
+                .tint(Color("AccentPrimary"))
+                .foregroundStyle(Color("TextPrimary"))
+        }
+    }
+
+    private var measurementFields: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            keyField(
+                title: "Measurement name",
+                placeholder: "temperature",
+                keys: viewModel.measurementKeys(ofDeviceId: source.deviceId)
+            )
+            FormTextField(title: "Equals", placeholder: "21", text: $source.matchText)
+        }
+    }
+
+    @ViewBuilder
+    private func keyField(title: String, placeholder: String, keys: [String]) -> some View {
+        if keys.isEmpty {
+            FormTextField(title: title, placeholder: placeholder, text: $source.matchKey)
+        } else {
+            Picker(title, selection: matchKeyBinding) {
+                ForEach(keys, id: \.self) { key in
+                    Text(key).tag(key)
+                }
+            }
+            .tint(Color("AccentPrimary"))
+        }
+    }
+
+    private var matchKindBinding: Binding<ScenarioSourceDraft.MatchKind> {
+        Binding(
+            get: { source.matchKind },
+            set: { viewModel.selectMatchKind($0, forSource: source) }
+        )
+    }
+
+    private var matchKeyBinding: Binding<String> {
+        Binding(
+            get: { source.matchKey },
+            set: { viewModel.selectMatchKey($0, forSource: source) }
+        )
+    }
+}
