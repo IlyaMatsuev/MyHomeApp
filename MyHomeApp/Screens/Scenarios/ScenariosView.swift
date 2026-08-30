@@ -17,48 +17,62 @@ struct ScenariosView: View {
         @Bindable var viewModel = viewModel
 
         return NavigationStack {
-            content(selectedGroup: $viewModel.selectedGroup)
-                .navigationTitle("Scenarios")
-                .background(Color("BackgroundPrimary").ignoresSafeArea())
-                .toolbar { toolbarContent }
-                .task {
-                    if viewModel.state == .idle {
-                        await viewModel.load()
-                    }
+            VStack(spacing: 0) {
+                header
+                content(selectedGroup: $viewModel.selectedGroup)
+            }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .background(Color("BackgroundPrimary").ignoresSafeArea())
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ServerSwitcherMenu()
                 }
-                .sheet(item: $viewModel.editor) { editor in
-                    ScenarioEditorSheet(viewModel: editor)
+            }
+            .task {
+                if viewModel.state == .idle {
+                    await viewModel.load()
                 }
-                .confirmationDialog(
-                    "Delete this scenario?",
-                    isPresented: isDeletionConfirmed,
-                    titleVisibility: .visible,
-                    presenting: viewModel.scenarioPendingDeletion
-                ) { scenario in
-                    Button("Delete \"\(scenario.name)\"", role: .destructive) {
-                        Task { await viewModel.confirmDeletion() }
-                    }
-                    Button("Cancel", role: .cancel) {
-                        viewModel.cancelDeletion()
-                    }
+            }
+            .sheet(item: $viewModel.editor) { editor in
+                ScenarioEditorSheet(viewModel: editor)
+            }
+            .confirmationDialog(
+                "Delete this scenario?",
+                isPresented: isDeletionConfirmed,
+                titleVisibility: .visible,
+                presenting: viewModel.scenarioPendingDeletion
+            ) { scenario in
+                Button("Delete \"\(scenario.name)\"", role: .destructive) {
+                    Task { await viewModel.confirmDeletion() }
                 }
+                Button("Cancel", role: .cancel) {
+                    viewModel.cancelDeletion()
+                }
+            }
         }
     }
 
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            ServerSwitcherMenu()
-        }
-        ToolbarItem(placement: .topBarTrailing) {
+    private var header: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text("Scenarios")
+                .font(.largeTitle.weight(.bold))
+                .foregroundStyle(Color("TextPrimary"))
+
+            Spacer()
+
             Button {
                 viewModel.startCreating()
             } label: {
                 Image(systemName: "plus")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Color("AccentPrimary"))
             }
             .accessibilityLabel("New scenario")
             .disabled(viewModel.state == .loading)
         }
+        .padding(.horizontal)
+        .padding(.bottom, 12)
     }
 
     @ViewBuilder
