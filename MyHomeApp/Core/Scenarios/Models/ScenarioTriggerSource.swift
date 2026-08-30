@@ -1,9 +1,6 @@
 import AnyCodable
 
 /// One entry of `trigger.sources`.
-///
-/// The wire format is not uniform: a `cron` source carries its payload flat next to `type`,
-/// while a `device` source nests it under a `device` key — hence the hand-written `Codable`.
 enum ScenarioTriggerSource: Codable, Hashable {
     case cron(ScenarioCronTrigger)
     case device(ScenarioDeviceTrigger)
@@ -17,7 +14,7 @@ enum ScenarioTriggerSource: Codable, Hashable {
         var label: String {
             switch self {
             case .cron: return "On a schedule"
-            case .device: return "When a device…"
+            case .device: return "When a device..."
             }
         }
 
@@ -83,7 +80,6 @@ struct ScenarioCronTrigger: Hashable, Sendable {
     }
 }
 
-/// A device the scenario watches. The hub requires at least one of the three sections to be non-empty.
 struct ScenarioDeviceTrigger: Codable, Hashable {
     let externalId: String
     let commands: ScenarioValueMatch?
@@ -103,7 +99,6 @@ struct ScenarioDeviceTrigger: Codable, Hashable {
     }
 }
 
-/// The `{ "are": { … } }` matcher the hub uses for every device condition section.
 struct ScenarioValueMatch: Codable, Hashable {
     private enum CodingKeys: String, CodingKey {
         case are

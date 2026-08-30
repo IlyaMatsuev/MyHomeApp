@@ -11,7 +11,6 @@ struct HubScenarioService: ScenarioService {
 
     // TODO: Need to figure out how to handle pagination
     func fetchScenarios() async throws -> Page<Scenario> {
-        // The hub hides inactive scenarios by default, and the list needs them to render their toggle.
         let request = HubRequest.get("/scenarios", ["pageSize": "20", "includeInactive": "true"])
         let response: Page<Scenario> = try await client.send(request)
         return response

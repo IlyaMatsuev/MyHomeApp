@@ -1,8 +1,4 @@
 /// Naming rules and display wording for a scenario's `group`.
-///
-/// The hub owns the vocabulary — a group is created implicitly by the first scenario that names it —
-/// so `Scenario.group` stays a plain optional string. `nil` means the scenario has no group at all;
-/// there is no "none" group on the hub.
 enum ScenarioGroupName {
     static let ungroupedLabel = "Ungrouped"
 
@@ -15,7 +11,7 @@ enum ScenarioGroupName {
             .joined(separator: " ")
     }
 
-    /// English letters, digits and underscores only, and never digits alone — the hub's rule.
+    /// English letters, digits and underscores only, and never digits alone
     static func isValid(_ name: String) -> Bool {
         guard ScenarioLimits.groupNameLength.contains(name.count) else { return false }
         guard name.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_") }) else { return false }

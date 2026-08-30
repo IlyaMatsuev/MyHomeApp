@@ -1,17 +1,11 @@
 /// Validator for the hub's positional trigger expressions, e.g. `"(1 OR 2) AND 3"`.
-///
-/// Mirrors `validateTriggerLogic` on the hub: operands are 1-based positions in `trigger.sources`
-/// joined by `AND` / `OR`, parentheses are decorative, and every source must be referenced exactly
-/// once. Notably the hub supports **no** `NOT` — accepting one here would only produce a 400.
 enum ScenarioLogicExpression {
-    /// `true` when `expression` is one the hub will accept for a trigger with `sourceCount` sources.
     static func isValid(_ expression: String, sourceCount: Int) -> Bool {
         guard sourceCount > 0, ScenarioLimits.logicLength.contains(expression.count) else { return false }
         guard let operands = operands(in: expression) else { return false }
         return operands.count == sourceCount && operands.allSatisfy { (1...sourceCount).contains($0) }
     }
 
-    /// The 1-based positions the expression references, or `nil` when it is malformed.
     private static func operands(in expression: String) -> [Int]? {
         let text = expression.uppercased()
         var operands: [Int] = []

@@ -1,4 +1,3 @@
-/// Shifts a cron trigger to a solar event instead of a fixed wall-clock time.
 enum ScenarioSolarAdjustment: String, Codable, Hashable, CaseIterable, Identifiable {
     case sunrise
     case sunset
