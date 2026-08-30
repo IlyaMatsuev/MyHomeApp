@@ -51,12 +51,12 @@ validators) plus the Postman collection in `smarthome/api`. A `Scenarios.Scenari
   "trigger": {
     "sources": [
       { "type": "cron", "cron": "8 21 * * *", "adjustTo": "sunset" },
-      { "type": "device", "device": { "externalId": "…", "commands": { "are": { "action": "up_press" } } } },
-      { "type": "device", "device": { "externalId": "…", "controls": { "are": { "on": false } } } }
+      { "type": "device", "device": { "externalId": "...", "commands": { "are": { "action": "up_press" } } } },
+      { "type": "device", "device": { "externalId": "...", "controls": { "are": { "on": false } } } }
     ],
     "logic": "(1 OR 2) AND 3"
   },
-  "actions": [ { "externalId": "…", "set": { "controls": { "on": true } } } ],
+  "actions": [ { "externalId": "...", "set": { "controls": { "on": true } } } ],
   "repeatTimes": 3,
   "createdAt": "2025-08-30T16:04:38.229Z",
   "updatedAt": "2026-08-15T10:52:37.396Z"
@@ -112,10 +112,10 @@ blocked in the form instead: name 3–80, description 10–255 (or absent), grou
 - `Core/Scenarios/Models/ScenarioGroupName.swift` — display wording for a `group` + the hub's naming rule.
 - `Core/Scenarios/Models/ScenarioGroupFilter.swift` — `all` / `ungrouped` / `named`.
 - `Core/Scenarios/Models/ScenarioLimits.swift` — the hub's field constraints, mirrored.
-- `Core/Scenarios/Models/ScenarioTriggerLogic.swift` — `all` / `any` / `custom(String)` + string bridging.
+- `Core/Scenarios/Models/ScenarioTriggerLogic.swift` — `Mode` (`all` / `any` / `custom`) + custom expression string bridging.
 - `Core/Scenarios/Models/ScenarioLogicExpression.swift` — validator for custom expressions.
 - `Core/Scenarios/Models/ScenarioPayload.swift` — the writable subset sent to the hub.
-- `Core/Scenarios/Models/ScenarioErrorMessage.swift` — user-facing wording for `HubAPIError`, shared by list and editor.
+- `Core/Scenarios/Models/ScenarioError.swift` — user-facing wording for `HubAPIError`, shared by list and editor.
 - `Core/Scenarios/ScenarioService.swift`, `HubScenarioService.swift`, `MockScenarioService.swift`,
   `EnvironmentValues+ScenarioService.swift`.
 
@@ -208,14 +208,14 @@ Give each source a stable `id` and replace the expression string with a small re
 "trigger": {
   "sources": [
     { "id": "evening",  "type": "cron",   "cron": "8 21 * * *", "adjustTo": "sunset" },
-    { "id": "remote",   "type": "device", "device": { … } },
-    { "id": "lightOff", "type": "device", "device": { … } }
+    { "id": "remote",   "type": "device", "device": { ... } },
+    { "id": "lightOff", "type": "device", "device": { ... } }
   ],
   "match": { "all": [ { "any": ["evening", "remote"] }, "lightOff" ] }
 }
 ```
 
-Grammar: a node is either a source id (string), `{"all": [node…]}`, `{"any": [node…]}`, or `{"not": node}`.
+Grammar: a node is either a source id (string), `{"all": [node...]}`, `{"any": [node...]}`, or `{"not": node}`.
 
 Why it is better:
 
@@ -252,7 +252,7 @@ longer produce a scenario the hub will reject.
 TabView
 └── Scenarios (NavigationStack)
     ├── toolbar: ServerSwitcherMenu (trailing), "+" add button (trailing)
-    ├── FilterChipsBar — All | <group> | <group> …
+    ├── FilterChipsBar — All | <group> | <group> ...
     └── List, sectioned by group
         └── row: name · trigger/action summary · active Toggle
             ├── tap        → editor sheet (edit)
@@ -261,7 +261,7 @@ TabView
 
 - The **editor sheet** is a `Form`-less `ScrollView` styled like `AddEditServerSheet` (Cancel / Save toolbar):
   name, description, group, active, *When* (trigger sources + match mode), *Then* (device actions).
-- **Trigger sources** are numbered cards edited inline. Adding uses a menu ("On a schedule" / "When a device…");
+- **Trigger sources** are numbered cards edited inline. Adding uses a menu ("On a schedule" / "When a device...");
   the card's number is the index a custom logic expression refers to.
 - **Device sources** pick a device from the loaded device list, then match one of the hub's three
   condition sections: a *command* (free text, e.g. `up_press` — commands are not discoverable from
