@@ -52,7 +52,7 @@ struct ScenarioEditorSheet: View {
     // MARK: - Details
 
     private var detailsSection: some View {
-        card {
+        VStack(alignment: .leading, spacing: 12) {
             FormTextField(
                 title: "Name",
                 placeholder: "Warm light on",
