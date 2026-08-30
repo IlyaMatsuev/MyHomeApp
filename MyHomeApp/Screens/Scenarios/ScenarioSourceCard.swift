@@ -51,24 +51,26 @@ struct ScenarioSourceCard: View {
 
     private var cronFields: some View {
         VStack(alignment: .leading, spacing: 10) {
-            FormTextField(
-                title: "Cron expression",
-                placeholder: "0 8 * * *",
-                text: $source.cron,
-                isMonospaced: true
-            )
-
-            Text("minute hour day-of-month month day-of-week")
-                .font(.caption2)
-                .foregroundStyle(Color("TextSecondary"))
-
-            Picker("Adjust to", selection: $source.adjustTo) {
+            Picker("Runs at", selection: $source.adjustTo) {
                 Text("Exact time").tag(ScenarioSolarAdjustment?.none)
                 ForEach(ScenarioSolarAdjustment.allCases) { adjustment in
                     Text(adjustment.label).tag(Optional(adjustment))
                 }
             }
             .tint(Color("AccentPrimary"))
+
+            if source.adjustTo == nil {
+                FormTextField(
+                    title: "Cron expression",
+                    placeholder: ScenarioSourceDraft.defaultCron,
+                    text: $source.cron,
+                    isMonospaced: true
+                )
+
+                Text("minute hour day-of-month month day-of-week")
+                    .font(.caption2)
+                    .foregroundStyle(Color("TextSecondary"))
+            }
         }
     }
 

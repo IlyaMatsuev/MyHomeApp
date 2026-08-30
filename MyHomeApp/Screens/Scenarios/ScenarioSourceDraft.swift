@@ -35,7 +35,12 @@ struct ScenarioSourceDraft: Identifiable, Hashable {
     var kind: ScenarioTriggerSource.Kind
 
     var cron: String
-    var adjustTo: ScenarioSolarAdjustment?
+    var adjustTo: ScenarioSolarAdjustment? {
+        didSet {
+            guard adjustTo != nil, !Self.isCronShaped(cron) else { return }
+            cron = Self.defaultCron
+        }
+    }
 
     var deviceId: String
     var matchKind: MatchKind
@@ -48,7 +53,7 @@ struct ScenarioSourceDraft: Identifiable, Hashable {
         switch kind {
         case .cron:
             // The hub parses the expression with a cron validator; catch the obvious shape mistakes here.
-            return (5...6).contains(cron.split(separator: " ").count)
+            return Self.isCronShaped(cron)
 
         case .device:
             guard !deviceId.isBlank, !matchKey.isBlank else { return false }
@@ -148,6 +153,10 @@ struct ScenarioSourceDraft: Identifiable, Hashable {
                 matchValue: control?.value.value as? Bool ?? true
             )
         }
+    }
+
+    private static func isCronShaped(_ expression: String) -> Bool {
+        (5...6).contains(expression.split(separator: " ").count)
     }
 
     private static func firstEntry(of match: ScenarioValueMatch?) -> (key: String, value: AnyCodable)? {
