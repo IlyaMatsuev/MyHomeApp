@@ -18,6 +18,24 @@ struct ScenarioGroupNameTests {
         #expect(ScenarioGroupName.label(for: group) == "Ungrouped")
     }
 
+    // MARK: - apiName(for:)
+
+    @Test(arguments: [
+        ("Living Room", "living_room"),
+        ("living_room", "living_room"),
+        ("My  Room", "my_room"),
+        ("Winter-Garden", "winter_garden"),
+        ("  Kitchen  ", "kitchen")
+    ])
+    func apiNameConvertsALabelIntoTheHubName(label: String, expected: String) {
+        #expect(ScenarioGroupName.apiName(for: label) == expected)
+    }
+
+    @Test
+    func apiNameAndLabelRoundTrip() {
+        #expect(ScenarioGroupName.apiName(for: ScenarioGroupName.label(for: "living_room")) == "living_room")
+    }
+
     // MARK: - isValid(_:) — mirrors the hub's group name rule
 
     @Test(arguments: ["living_room", "favourites", "room2", "abc"])

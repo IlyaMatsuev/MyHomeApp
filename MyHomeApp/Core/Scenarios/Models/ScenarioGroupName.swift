@@ -11,6 +11,14 @@ enum ScenarioGroupName {
             .joined(separator: " ")
     }
 
+    /// `Living Room` -> `living_room`, the name the hub stores.
+    static func apiName(for label: String) -> String {
+        label
+            .split(whereSeparator: { $0 == "_" || $0 == "-" || $0.isWhitespace })
+            .joined(separator: "_")
+            .lowercased()
+    }
+
     /// English letters, digits and underscores only, and never digits alone
     static func isValid(_ name: String) -> Bool {
         guard ScenarioLimits.groupNameLength.contains(name.count) else { return false }

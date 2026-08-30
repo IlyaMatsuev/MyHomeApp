@@ -65,12 +65,12 @@ struct ScenarioDraftValidationTests {
     @Test
     func aGroupNameTheHubWouldRejectIsRejected() {
         var draft = Self.completeDraft()
-        draft.group = "living room"
+        draft.group = "Living Room!"
 
         #expect(draft.validationError?.contains("Group") == true)
 
-        draft.group = "living_room"
-        #expect(draft.isValid)
+        draft.group = "Living Room"
+        #expect(draft.isValid, "Spaces become underscores, so the hub gets \"living_room\"")
     }
 
     @Test

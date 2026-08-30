@@ -40,7 +40,7 @@ struct ScenarioDraft: Hashable {
             return "Description must be \(ScenarioLimits.descriptionLength.lowerBound)"
                 + "–\(ScenarioLimits.descriptionLength.upperBound) characters, or left empty."
         }
-        if !group.isBlank, !ScenarioGroupName.isValid(group.trimmed) {
+        if !group.isBlank, !ScenarioGroupName.isValid(groupApiName) {
             return "Group must be \(ScenarioLimits.groupNameLength.lowerBound)"
                 + "–\(ScenarioLimits.groupNameLength.upperBound) letters, digits or underscores, and not digits only."
         }
@@ -67,11 +67,14 @@ struct ScenarioDraft: Hashable {
 
     var isValid: Bool { validationError == nil }
 
+    /// The editor holds the group as its label; the hub stores the name this converts it to.
+    var groupApiName: String { ScenarioGroupName.apiName(for: group.trimmed) }
+
     var payload: ScenarioPayload {
         ScenarioPayload(
             name: name.trimmed,
             description: description.isBlank ? nil : description.trimmed,
-            group: group.isBlank ? nil : group.trimmed,
+            group: group.isBlank ? nil : groupApiName,
             active: active,
             trigger: ScenarioTrigger(
                 sources: sources.map(\.triggerSource),
@@ -98,7 +101,7 @@ struct ScenarioDraft: Hashable {
 
         name = scenario.name
         description = scenario.description ?? ""
-        group = scenario.group ?? ""
+        group = scenario.group.map { ScenarioGroupName.label(for: $0) } ?? ""
         active = scenario.active
         self.sources = sources
         actions = scenario.actions.map { ScenarioActionDraft(action: $0) }

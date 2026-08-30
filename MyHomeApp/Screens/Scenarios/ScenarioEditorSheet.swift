@@ -4,6 +4,7 @@ struct ScenarioEditorSheet: View {
     @Bindable var viewModel: ScenarioEditorViewModel
 
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var isGroupFieldFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -74,31 +75,49 @@ struct ScenarioEditorSheet: View {
 
     private var groupField: some View {
         VStack(alignment: .leading, spacing: 8) {
-            FormTextField(title: "Group", placeholder: ScenarioGroupName.ungroupedLabel, text: $viewModel.draft.group)
+            FormTextField(
+                title: "Group",
+                placeholder: ScenarioGroupName.ungroupedLabel,
+                text: $viewModel.draft.group,
+                autocapitalization: .words
+            )
+            .focused($isGroupFieldFocused)
 
-            if !viewModel.knownGroups.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(viewModel.knownGroups, id: \.self) { group in
-                            groupSuggestion(group)
-                        }
-                    }
-                }
-                .scrollClipDisabled()
+            if !viewModel.draft.group.isBlank {
+                hint("The hub stores it as \"\(viewModel.draft.groupApiName)\".")
             }
+
+            groupPills
         }
     }
 
-    private func groupSuggestion(_ group: String) -> some View {
-        Button {
-            viewModel.draft.group = group
-        } label: {
-            Text(ScenarioGroupName.label(for: group))
+    private var groupPills: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(viewModel.knownGroups, id: \.self) { group in
+                    groupPill(ScenarioGroupName.label(for: group), isSelected: viewModel.draft.groupApiName == group) {
+                        viewModel.draft.group = ScenarioGroupName.label(for: group)
+                    }
+                }
+
+                groupPill("+", isSelected: false) {
+                    viewModel.draft.group = ""
+                    isGroupFieldFocused = true
+                }
+                .accessibilityLabel("New group")
+            }
+        }
+        .scrollClipDisabled()
+    }
+
+    private func groupPill(_ title: String, isSelected: Bool, select: @escaping () -> Void) -> some View {
+        Button(action: select) {
+            Text(title)
                 .font(.caption)
                 .padding(.vertical, 6)
                 .padding(.horizontal, 10)
-                .foregroundStyle(Color("TextSecondary"))
-                .background(Capsule().fill(Color("BackgroundTertiary")))
+                .foregroundStyle(isSelected ? Color("TextPrimary") : Color("TextSecondary"))
+                .background(Capsule().fill(isSelected ? Color("AccentPrimary") : Color("BackgroundSecondary")))
         }
         .buttonStyle(.plain)
     }

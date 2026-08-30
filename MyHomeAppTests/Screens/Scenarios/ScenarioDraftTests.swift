@@ -35,7 +35,7 @@ struct ScenarioDraftTests {
 
         #expect(draft.name == "Warm light on")
         #expect(draft.description == "Switches on the warm light in the living room")
-        #expect(draft.group == "living_room")
+        #expect(draft.group == "Living Room", "The editor holds the group as its label")
         #expect(draft.active)
     }
 

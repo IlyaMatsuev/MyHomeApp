@@ -254,7 +254,7 @@ struct ScenariosViewModelTests {
         let editor = try #require(viewModel.editor)
         #expect(editor.mode == .edit(scenario.externalId))
         #expect(editor.draft.name == "Movie time")
-        #expect(editor.draft.group == "living_room")
+        #expect(editor.draft.group == "Living Room")
         #expect(editor.draft.sources.count == 1)
         #expect(editor.draft.actions.count == 1)
     }

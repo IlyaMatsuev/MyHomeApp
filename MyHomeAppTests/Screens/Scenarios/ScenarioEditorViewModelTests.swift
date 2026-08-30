@@ -166,7 +166,7 @@ struct ScenarioEditorViewModelTests {
         service.createScenarioResult = .success(created)
         var draft = validDraft()
         draft.description = "  Dim the lights  "
-        draft.group = "living_room"
+        draft.group = "Living Room"
         let viewModel = makeViewModel(draft: draft)
 
         await viewModel.save()
