@@ -53,7 +53,7 @@ final class ScenarioEditorViewModel: Identifiable {
         draft: ScenarioDraft,
         devices: [Device],
         knownGroups: [String],
-        knownCommands: [ScenarioKnownCommand] = [],
+        knownCommands: [ScenarioKnownCommand],
         service: ScenarioService,
         onSaved: @escaping @MainActor (Scenario) -> Void
     ) {
@@ -138,17 +138,18 @@ final class ScenarioEditorViewModel: Identifiable {
     }
 
     private func applyMatchValue(to source: inout ScenarioSourceDraft) {
-        let device = device(withId: source.deviceId)
+        let matched = device(withId: source.deviceId)
         switch source.matchKind {
         case .command:
             source.matchText = knownCommand(ofDeviceId: source.deviceId)?.value ?? ""
 
         case .control:
-            source.matchValue = device?.controls?[source.matchKey]?.value as? Bool ?? true
+            let controls = matched?.controls ?? [:]
+            source.matchValue = controls[source.matchKey]?.value as? Bool ?? true
 
         case .measurement:
-            source.matchText = device?.measurements?[source.matchKey]
-                .map(ScenarioSourceDraft.text(of:)) ?? ""
+            let measurements = matched?.measurements ?? [:]
+            source.matchText = measurements[source.matchKey].map(ScenarioSourceDraft.text(of:)) ?? ""
         }
     }
 

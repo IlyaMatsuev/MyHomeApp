@@ -150,8 +150,8 @@ struct ScenarioSourceDraft: Identifiable, Hashable {
         (5...6).contains(expression.split(separator: " ").count)
     }
 
-    private static func firstEntry(of match: ScenarioValueMatch?) -> (key: String, value: AnyCodable)? {
-        match?.are.sorted { $0.key < $1.key }.first
+    static func firstEntry(of match: ScenarioValueMatch?) -> (key: String, value: AnyCodable)? {
+        match?.are.min { $0.key < $1.key }
     }
 
     static func text(of value: AnyCodable) -> String {

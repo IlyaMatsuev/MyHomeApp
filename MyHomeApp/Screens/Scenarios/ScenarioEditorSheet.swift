@@ -291,6 +291,7 @@ struct ScenarioEditorSheet: View {
             draft: ScenarioDraft(),
             devices: MockDeviceService.allDevices,
             knownGroups: ["living_room"],
+            knownCommands: [],
             service: MockScenarioService(),
             onSaved: { _ in }
         )
@@ -305,6 +306,7 @@ struct ScenarioEditorSheet: View {
             draft: ScenarioDraft(scenario: scenario),
             devices: MockDeviceService.allDevices,
             knownGroups: [scenario.group].compactMap { $0 },
+            knownCommands: [],
             service: MockScenarioService(),
             onSaved: { _ in }
         )

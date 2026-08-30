@@ -67,7 +67,7 @@ final class ScenariosViewModel {
             .flatMap(\.trigger.sources)
             .compactMap { source -> ScenarioKnownCommand? in
                 guard case .device(let trigger) = source,
-                      let command = trigger.commands?.are.sorted(by: { $0.key < $1.key }).first else {
+                      let command = ScenarioSourceDraft.firstEntry(of: trigger.commands) else {
                     return nil
                 }
                 return ScenarioKnownCommand(
