@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Labelled single-line text field used by the app's forms.
 struct FormTextField: View {
     let title: String
     let placeholder: String
@@ -8,6 +7,7 @@ struct FormTextField: View {
 
     var isMonospaced: Bool = false
     var autocapitalization: TextInputAutocapitalization = .never
+    var focus: FocusState<Bool>.Binding?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -15,7 +15,7 @@ struct FormTextField: View {
                 .font(.footnote)
                 .foregroundStyle(Color("TextSecondary"))
 
-            TextField(placeholder, text: $text)
+            field
                 .font(isMonospaced ? .body.monospaced() : .body)
                 .textInputAutocapitalization(autocapitalization)
                 .autocorrectionDisabled()
@@ -24,6 +24,15 @@ struct FormTextField: View {
                 .frame(minHeight: 44)
                 .background(Color("BackgroundTertiary"))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+    }
+
+    @ViewBuilder
+    private var field: some View {
+        if let focus {
+            TextField(placeholder, text: $text).focused(focus)
+        } else {
+            TextField(placeholder, text: $text)
         }
     }
 }

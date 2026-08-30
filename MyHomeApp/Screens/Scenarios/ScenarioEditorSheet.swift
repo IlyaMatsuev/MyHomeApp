@@ -79,9 +79,9 @@ struct ScenarioEditorSheet: View {
                 title: "Group",
                 placeholder: ScenarioGroupName.ungroupedLabel,
                 text: $viewModel.draft.group,
-                autocapitalization: .words
+                autocapitalization: .words,
+                focus: $isGroupFieldFocused
             )
-            .focused($isGroupFieldFocused)
 
             if !viewModel.draft.group.isBlank {
                 hint("The hub stores it as \"\(viewModel.draft.groupApiName)\".")
