@@ -3,11 +3,7 @@
 /// The hub stores a positional boolean string (`"(1 OR 2) AND 3"`). Almost every real scenario is
 /// "all of these" or "any of these", so the app models those two explicitly and keeps a `custom`
 /// escape hatch for anything else.
-enum ScenarioTriggerLogic: Hashable {
-    case all
-    case any
-    case custom(String)
-
+struct ScenarioTriggerLogic: Hashable {
     enum Mode: String, Hashable, CaseIterable, Identifiable {
         case all
         case any
@@ -24,29 +20,28 @@ enum ScenarioTriggerLogic: Hashable {
         }
     }
 
-    var mode: Mode {
-        switch self {
-        case .all: return .all
-        case .any: return .any
-        case .custom: return .custom
-        }
+    static let all = Self(mode: .all)
+    static let any = Self(mode: .any)
+
+    let mode: Mode
+    let customExpression: String?
+
+    init(mode: Mode, customExpression: String? = nil) {
+        self.mode = mode
+        self.customExpression = mode == .custom ? customExpression : nil
     }
 
-    var customExpression: String? {
-        switch self {
-        case .custom(let expression): return expression
-        case .all, .any: return nil
-        }
+    static func custom(_ expression: String) -> Self {
+        Self(mode: .custom, customExpression: expression)
     }
 }
 
 extension ScenarioTriggerLogic {
-    /// The expression to send to the hub for a trigger with `sourceCount` sources.
     func expression(sourceCount: Int) -> String {
-        switch self {
+        switch mode {
         case .all: return Self.canonicalExpression(joinedBy: "AND", sourceCount: sourceCount)
         case .any: return Self.canonicalExpression(joinedBy: "OR", sourceCount: sourceCount)
-        case .custom(let expression): return expression.trimmed
+        case .custom: return (customExpression ?? "").trimmed
         }
     }
 
@@ -55,9 +50,6 @@ extension ScenarioTriggerLogic {
     }
 
     /// Maps a stored expression back onto the editor's three-way choice.
-    ///
-    /// An expression that is exactly the canonical all-`AND` / all-`OR` form for the current source
-    /// count round-trips as `.all` / `.any`; anything else is preserved verbatim as `.custom`.
     static func parse(_ expression: String, sourceCount: Int) -> Self {
         guard !expression.isBlank else { return .all }
 

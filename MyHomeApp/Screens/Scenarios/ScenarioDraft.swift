@@ -26,11 +26,7 @@ struct ScenarioDraft: Hashable {
     var customLogic: String
 
     var logic: ScenarioTriggerLogic {
-        switch logicMode {
-        case .all: return .all
-        case .any: return .any
-        case .custom: return .custom(customLogic)
-        }
+        ScenarioTriggerLogic(mode: logicMode, customExpression: customLogic)
     }
 
     /// What still stops the hub from accepting this draft, or `nil` when it is ready to send.
