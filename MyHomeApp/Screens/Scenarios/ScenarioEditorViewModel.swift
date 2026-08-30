@@ -3,9 +3,6 @@ import Observation
 import AnyCodable
 import os
 
-/// One editing session — creating a new scenario or updating an existing one.
-///
-/// Presented via `.sheet(item:)`, hence `Identifiable`: a fresh instance means a fresh sheet.
 @Observable
 @MainActor
 final class ScenarioEditorViewModel: Identifiable {
@@ -39,17 +36,12 @@ final class ScenarioEditorViewModel: Identifiable {
 
     var canSave: Bool { !loading && draft.isValid }
 
-    /// Why saving is still blocked, shown under the form. `nil` once the draft is ready to send.
     var validationMessage: String? { draft.validationError }
 
-    /// Combining triggers only means something past the first one — but a custom expression must stay
-    /// reachable whatever the source count, otherwise deleting sources can strand an expression that
-    /// blocks saving with no way to edit it.
     var showsLogicEditor: Bool {
         draft.sources.count > 1 || draft.logicMode == .custom
     }
 
-    /// Inline complaint about the custom expression, shown under the logic field.
     var logicErrorMessage: String? {
         guard draft.logicMode == .custom, !draft.customLogic.isBlank else { return nil }
         guard !draft.logic.isValid(sourceCount: draft.sources.count) else { return nil }
@@ -80,7 +72,6 @@ final class ScenarioEditorViewModel: Identifiable {
         devices.first { $0.externalId == deviceId }
     }
 
-    /// Control keys of a device the app knows how to set — today that means booleans only.
     func toggleControlKeys(ofDeviceId deviceId: String) -> [String] {
         guard let controls = device(withId: deviceId)?.controls else { return [] }
         return controls
@@ -131,8 +122,6 @@ final class ScenarioEditorViewModel: Identifiable {
         applyMatchValue(to: &draft.sources[index])
     }
 
-    /// Preselects the key of the matched section, then the value the device currently reports for it,
-    /// so a new condition starts from something real instead of an empty field.
     private func applyMatchDefaults(to source: inout ScenarioSourceDraft) {
         switch source.matchKind {
         case .command:

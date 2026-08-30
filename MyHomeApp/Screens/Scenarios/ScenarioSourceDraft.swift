@@ -1,13 +1,7 @@
 import Foundation
 import AnyCodable
 
-/// Editor-side representation of one `ScenarioTriggerSource`.
-///
-/// The wire model is an enum with associated values, which SwiftUI cannot bind into. The draft is
-/// therefore flat: every field for every kind lives side by side and `kind` decides which ones count.
 struct ScenarioSourceDraft: Identifiable, Hashable {
-    /// Which of the device's condition sections is being matched — the hub's `commands`,
-    /// `controls` or `measurements`, each shaped as `{ "are": { key: value } }`.
     enum MatchKind: String, Hashable, CaseIterable, Identifiable {
         case command
         case control
@@ -45,14 +39,12 @@ struct ScenarioSourceDraft: Identifiable, Hashable {
     var deviceId: String
     var matchKind: MatchKind
     var matchKey: String
-    /// The matched value for a `command` or a `measurement`; a control uses `matchValue` instead.
     var matchText: String
     var matchValue: Bool
 
     var isValid: Bool {
         switch kind {
         case .cron:
-            // The hub parses the expression with a cron validator; catch the obvious shape mistakes here.
             return Self.isCronShaped(cron)
 
         case .device:
@@ -125,7 +117,6 @@ struct ScenarioSourceDraft: Identifiable, Hashable {
         }
     }
 
-    /// A device source may carry several condition sections; the editor shows the first populated one.
     private init(device trigger: ScenarioDeviceTrigger) {
         if let command = Self.firstEntry(of: trigger.commands) {
             self.init(

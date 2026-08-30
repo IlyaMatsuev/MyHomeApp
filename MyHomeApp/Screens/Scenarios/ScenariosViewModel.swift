@@ -3,7 +3,6 @@ import Observation
 import os
 
 struct ScenarioGroupSection: Identifiable, Hashable {
-    /// `nil` for the scenarios the hub returned without a group.
     let group: String?
     let scenarios: [Scenario]
 
@@ -13,7 +12,6 @@ struct ScenarioGroupSection: Identifiable, Hashable {
 
 extension ScenarioGroupSection: Comparable {
     static func < (lhs: Self, rhs: Self) -> Bool {
-        // Ungrouped scenarios sit at the top, the named groups follow alphabetically.
         switch (lhs.group, rhs.group) {
         case (nil, nil): return false
         case (nil, _): return true
@@ -43,9 +41,7 @@ final class ScenariosViewModel {
     private(set) var devices: [Device] = []
     private(set) var busyScenarioIds: Set<String> = []
 
-    /// Drives the editor sheet — non-nil while creating or editing.
     var editor: ScenarioEditorViewModel?
-    /// Drives the delete confirmation dialog.
     var scenarioPendingDeletion: Scenario?
 
     private let service: ScenarioService
@@ -58,18 +54,14 @@ final class ScenariosViewModel {
             .sorted()
     }
 
-    /// Chips for the filter bar — the groups actually present in the loaded scenarios.
     var groupFilters: [ScenarioGroupFilter] {
         [.all] + groupSections.map { ScenarioGroupFilter(group: $0.group) }
     }
 
-    /// Group names to suggest in the editor. The hub creates a group implicitly, so this is
-    /// a convenience rather than a closed list.
     var knownGroups: [String] {
         groupSections.compactMap(\.group)
     }
 
-    /// Command matches already in use, so a new device trigger can offer a value the hub has seen.
     var knownCommands: [ScenarioKnownCommand] {
         scenarios
             .flatMap(\.trigger.sources)
@@ -107,7 +99,6 @@ final class ScenariosViewModel {
     func load() async {
         state = .loading
 
-        // Devices only feed the editor's pickers, so their failure must not fail the screen.
         async let devicesPage = deviceService.fetchDevices()
 
         do {

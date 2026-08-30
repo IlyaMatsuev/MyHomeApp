@@ -4,7 +4,6 @@ import Testing
 @testable import MyHomeApp
 
 struct ScenarioCodableTests {
-    /// A `Scenarios.ScenarioResponse` as the hub returns it.
     private static let sampleJSON = """
     {
         "name": "Warm light on",

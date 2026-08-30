@@ -165,7 +165,6 @@ struct ScenarioEditorSheet: View {
         }
     }
 
-    /// Position of a source in the trigger — the number a custom logic expression refers to.
     private func number(of source: ScenarioSourceDraft) -> Int {
         (viewModel.draft.sources.firstIndex { $0.id == source.id } ?? 0) + 1
     }
@@ -270,7 +269,6 @@ struct ScenarioEditorSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// The remaining blocker on the draft — the reason the Save button is disabled.
     @ViewBuilder
     private var validationText: some View {
         if let message = viewModel.validationMessage {

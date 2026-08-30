@@ -8,13 +8,10 @@ struct Scenario: Codable, Identifiable, Hashable {
     let trigger: ScenarioTrigger
     let actions: [ScenarioAction]
 
-    /// Mutable so the list can flip it optimistically before the hub confirms.
     var active: Bool
 
-    /// `nil` when the scenario belongs to no group — the hub has no "none" group.
     let group: String?
 
-    /// Executions left before the hub deactivates the scenario; `nil` repeats forever.
     let repeatTimes: Int?
 
     let createdAt: Date

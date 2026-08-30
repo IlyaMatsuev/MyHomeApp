@@ -2,7 +2,6 @@ import Foundation
 import Testing
 @testable import MyHomeApp
 
-/// Sectioning and filtering of the loaded scenarios by their hub `group`.
 @MainActor
 struct ScenariosViewModelGroupingTests {
     private let service: StubScenarioService

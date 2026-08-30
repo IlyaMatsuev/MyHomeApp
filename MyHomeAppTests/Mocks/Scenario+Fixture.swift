@@ -126,7 +126,6 @@ final class ScenarioFixtureBuilder {
             externalId: externalId,
             name: name,
             description: description,
-            // Without an explicit expression the fixture uses the "all must match" form the hub expects.
             trigger: ScenarioTrigger(
                 sources: sources,
                 logic: logic ?? ScenarioTriggerLogic.all.expression(sourceCount: sources.count)

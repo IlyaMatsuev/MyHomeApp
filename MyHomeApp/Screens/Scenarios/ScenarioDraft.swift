@@ -1,9 +1,5 @@
 import Foundation
 
-/// Everything the scenario editor can change, in a shape SwiftUI can bind to.
-///
-/// `Scenario` is immutable and wire-shaped (enums with associated values, `AnyCodable` maps), which
-/// makes it a poor form model. `ScenarioDraft` is the mutable mirror; `payload` converts it back.
 struct ScenarioDraft: Hashable {
     var name: String
     var description: String
@@ -13,8 +9,6 @@ struct ScenarioDraft: Hashable {
     var sources: [ScenarioSourceDraft]
     var actions: [ScenarioActionDraft]
 
-    /// Switching to `custom` seeds the expression with the equivalent of the previous choice,
-    /// so the user edits something meaningful instead of an empty field.
     var logicMode: ScenarioTriggerLogic.Mode {
         didSet {
             guard logicMode == .custom, customLogic.isBlank else { return }
@@ -29,8 +23,6 @@ struct ScenarioDraft: Hashable {
         ScenarioTriggerLogic(mode: logicMode, customExpression: customLogic)
     }
 
-    /// What still stops the hub from accepting this draft, or `nil` when it is ready to send.
-    /// The rules mirror the hub's own validation, so a valid draft cannot come back as a 400.
     var validationError: String? {
         if !ScenarioLimits.nameLength.contains(name.trimmed.count) {
             return "Name must be \(ScenarioLimits.nameLength.lowerBound)"
@@ -67,7 +59,6 @@ struct ScenarioDraft: Hashable {
 
     var isValid: Bool { validationError == nil }
 
-    /// The editor holds the group as its label; the hub stores the name this converts it to.
     var groupApiName: String { ScenarioGroupName.apiName(for: group.trimmed) }
 
     var payload: ScenarioPayload {

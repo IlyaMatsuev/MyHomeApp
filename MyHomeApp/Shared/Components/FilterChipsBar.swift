@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Horizontal row of selectable capsules used to filter a list by a single value.
 struct FilterChipsBar<Value: Hashable>: View {
     struct Chip: Identifiable {
         let value: Value

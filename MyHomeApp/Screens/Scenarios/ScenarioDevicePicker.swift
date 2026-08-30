@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Menu that picks one of the devices the hub knows about.
 struct ScenarioDevicePicker: View {
     let devices: [Device]
     let selectedDeviceId: String

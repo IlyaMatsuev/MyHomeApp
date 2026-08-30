@@ -3,7 +3,6 @@ import AnyCodable
 import Testing
 @testable import MyHomeApp
 
-/// Devices the editor offers in its pickers. Kept outside the suite so they can be used as default arguments.
 private enum Fixtures {
     static let lamp = Device.fixture(name: "Lamp")
         .withControls(["on": AnyCodable(false), "brightness": AnyCodable(80)])

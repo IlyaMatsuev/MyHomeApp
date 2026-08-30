@@ -1,8 +1,6 @@
 import Testing
 @testable import MyHomeApp
 
-/// The expected results mirror `validateTriggerLogic` on the hub: operands joined by `AND` / `OR`,
-/// decorative parentheses, no `NOT`, and every source referenced exactly once.
 struct ScenarioLogicExpressionTests {
     // MARK: - accepted expressions
 

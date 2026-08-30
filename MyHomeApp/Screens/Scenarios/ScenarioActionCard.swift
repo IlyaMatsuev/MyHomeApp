@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// One "then do this" row inside the editor.
 struct ScenarioActionCard: View {
     let viewModel: ScenarioEditorViewModel
     @Binding var action: ScenarioActionDraft

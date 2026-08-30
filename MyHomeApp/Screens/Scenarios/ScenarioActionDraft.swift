@@ -1,7 +1,6 @@
 import Foundation
 import AnyCodable
 
-/// Editor-side representation of one `ScenarioAction`.
 struct ScenarioActionDraft: Identifiable, Hashable {
     static let defaultControlKey = "on"
 

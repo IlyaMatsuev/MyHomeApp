@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// One trigger source inside the editor. The number matches the index used by a custom logic expression.
 struct ScenarioSourceCard: View {
     let viewModel: ScenarioEditorViewModel
     @Binding var source: ScenarioSourceDraft
@@ -134,7 +133,6 @@ struct ScenarioSourceCard: View {
         }
     }
 
-    /// A picker over the keys the device reports, or a free text field when the app doesn't know them.
     @ViewBuilder
     private func keyField(title: String, placeholder: String, keys: [String]) -> some View {
         if keys.isEmpty {

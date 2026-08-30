@@ -1,8 +1,6 @@
 import Testing
 @testable import MyHomeApp
 
-/// `ScenarioDraft.validationError` mirrors the hub's own rules, so a draft the editor accepts
-/// cannot come back as a validation error.
 struct ScenarioDraftValidationTests {
     // MARK: - validation
 

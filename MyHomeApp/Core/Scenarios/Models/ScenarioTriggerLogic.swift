@@ -1,8 +1,3 @@
-/// How the trigger sources combine.
-///
-/// The hub stores a positional boolean string (`"(1 OR 2) AND 3"`). Almost every real scenario is
-/// "all of these" or "any of these", so the app models those two explicitly and keeps a `custom`
-/// escape hatch for anything else.
 struct ScenarioTriggerLogic: Hashable {
     enum Mode: String, Hashable, CaseIterable, Identifiable {
         case all
@@ -49,7 +44,6 @@ extension ScenarioTriggerLogic {
         ScenarioLogicExpression.isValid(expression(sourceCount: sourceCount), sourceCount: sourceCount)
     }
 
-    /// Maps a stored expression back onto the editor's three-way choice.
     static func parse(_ expression: String, sourceCount: Int) -> Self {
         guard !expression.isBlank else { return .all }
 

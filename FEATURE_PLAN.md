@@ -109,7 +109,7 @@ blocked in the form instead: name 3–80, description 10–255 (or absent), grou
 - `Core/Scenarios/Models/ScenarioTriggerSource.swift` — the source enum with custom `Codable`, plus
   `ScenarioCronTrigger`, `ScenarioDeviceTrigger`, `ScenarioValueMatch`.
 - `Core/Scenarios/Models/ScenarioSolarAdjustment.swift` — `sunrise` / `sunset`.
-- `Core/Scenarios/Models/ScenarioGroupName.swift` — display wording for a `group` + the hub's naming rule.
+- `Core/Scenarios/Models/ScenarioGroupName.swift` — `group` label ⇄ hub name conversion + the hub's naming rule.
 - `Core/Scenarios/Models/ScenarioGroupFilter.swift` — `all` / `ungrouped` / `named`.
 - `Core/Scenarios/Models/ScenarioLimits.swift` — the hub's field constraints, mirrored.
 - `Core/Scenarios/Models/ScenarioTriggerLogic.swift` — `Mode` (`all` / `any` / `custom`) + custom expression string bridging.
@@ -130,6 +130,8 @@ blocked in the form instead: name 3–80, description 10–255 (or absent), grou
 - `Screens/Scenarios/ScenarioDevicePicker.swift` — the device menu shared by both cards.
 - `Screens/Scenarios/ScenarioDraft.swift`, `ScenarioSourceDraft.swift`, `ScenarioActionDraft.swift` — UI-side
   draft models, one type per file per the project's file-naming rule.
+- `Screens/Scenarios/ScenarioKnownCommand.swift` — a command match the loaded scenarios already use, the only
+  source of a device's command names and values the app has.
 
 **Shared**
 
@@ -251,7 +253,8 @@ longer produce a scenario the hub will reject.
 ```
 TabView
 └── Scenarios (NavigationStack)
-    ├── toolbar: ServerSwitcherMenu (trailing), "+" add button (trailing)
+    ├── toolbar: ServerSwitcherMenu (trailing), as on every other tab
+    ├── header row: "Scenarios" title + "+" add button (trailing)
     ├── FilterChipsBar — All | <group> | <group> ...
     └── List, sectioned by group
         └── row: name · trigger/action summary · active Toggle
@@ -261,12 +264,17 @@ TabView
 
 - The **editor sheet** is a `Form`-less `ScrollView` styled like `AddEditServerSheet` (Cancel / Save toolbar):
   name, description, group, active, *When* (trigger sources + match mode), *Then* (device actions).
+- The **group** is edited as its label ("Living Room"), converted to the hub's name (`living_room`) on save.
+  The pills below the field pick one of the groups already in use; the "+" pill clears the field for a new one.
 - **Trigger sources** are numbered cards edited inline. Adding uses a menu ("On a schedule" / "When a device...");
   the card's number is the index a custom logic expression refers to.
+- **Schedule sources** ask for the time first — *Exact time*, *Sunrise* or *Sunset*. The cron expression only
+  shows for an exact time; with a solar adjustment the hub rewrites the cron's time anyway.
 - **Device sources** pick a device from the loaded device list, then match one of the hub's three
   condition sections: a *command* (free text, e.g. `up_press` — commands are not discoverable from
   `Device`), a *control* (picker over the device's boolean control keys + a toggle) or a *measurement*
-  (picker over the device's measurement keys + the value to equal).
+  (picker over the device's measurement keys + the value to equal). A new condition starts from the value the
+  device currently reports, or — for a command — from one the loaded scenarios already use.
 - **Actions** are edited inline: device picker + control key picker + on/off toggle. This matches the only
   control shape the app models today (`DeviceControlType.toggle`).
 - The logic picker appears once there is more than one source — **or** whenever the mode is `Custom`, so that
@@ -301,7 +309,8 @@ Unit tests (Swift Testing, `UnitTests` plan):
 
 - `ScenarioCodableTests` — decodes the issue's JSON **verbatim**; round-trips; tolerates a missing
   `group` / `description` / `logic` and an unknown group value.
-- `ScenarioGroupNameTests` — label humanisation (`living_room` → `Living Room`), the `Ungrouped` fallback, the hub's name rule.
+- `ScenarioGroupNameTests` — label humanisation (`living_room` → `Living Room`), the conversion back
+  (`My Room` → `my_room`), the `Ungrouped` fallback, the hub's name rule.
 - `ScenarioTriggerLogicTests` — canonical `AND`/`OR` generation, parse-back, custom preservation.
 - `ScenarioLogicExpressionTests` — the hub's grammar exactly: no `NOT`, every source referenced once, out-of-range indexes.
 - `HubScenarioServiceTests` — request shape (method, path, query incl. `includeInactive`, body) and error propagation for all five operations.
