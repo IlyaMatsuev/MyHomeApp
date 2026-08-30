@@ -35,11 +35,14 @@ struct ScenarioListRow: View {
         .contentShape(Rectangle())
         .onTapGesture { viewModel.startEditing(scenario) }
         .swipeActions(edge: .trailing) {
-            Button(role: .destructive) {
+            // Not `role: .destructive`: that animates the row out on tap, before the
+            // confirmation is answered. The row leaves only once the hub confirms the delete.
+            Button {
                 viewModel.requestDeletion(of: scenario)
             } label: {
                 Label("Delete", systemImage: "trash")
             }
+            .tint(Color("Danger"))
             .disabled(busy)
         }
     }

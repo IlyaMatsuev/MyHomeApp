@@ -8,6 +8,7 @@ struct FormTextField: View {
     var isMonospaced: Bool = false
     var autocapitalization: TextInputAutocapitalization = .never
     var focus: FocusState<Bool>.Binding?
+    var error: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -24,7 +25,20 @@ struct FormTextField: View {
                 .frame(minHeight: 44)
                 .background(Color("BackgroundTertiary"))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(error == nil ? .clear : Color("Danger"), lineWidth: 1.5)
+                }
+
+            if let error {
+                Text(error)
+                    .font(.caption2)
+                    .foregroundStyle(Color("Danger"))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .transition(.opacity.combined(with: .offset(y: -4)))
+            }
         }
+        .animation(.spring(duration: 0.25), value: error)
     }
 
     @ViewBuilder

@@ -175,7 +175,7 @@ struct ScenariosViewModelTests {
         await viewModel.load()
         viewModel.requestDeletion(of: scenario)
 
-        await viewModel.confirmDeletion()
+        await viewModel.confirmDeletion(of: scenario)
 
         #expect(service.deletedScenarioIds == [scenario.externalId])
         #expect(viewModel.scenarios.isEmpty)
@@ -190,7 +190,7 @@ struct ScenariosViewModelTests {
         await viewModel.load()
         viewModel.requestDeletion(of: scenario)
 
-        await viewModel.confirmDeletion()
+        await viewModel.confirmDeletion(of: scenario)
 
         #expect(viewModel.scenarios.count == 1)
         let toast = try #require(toastStore.current)
@@ -198,11 +198,20 @@ struct ScenariosViewModelTests {
         #expect(!viewModel.isBusy(scenario))
     }
 
+    /// Dismissing the dialog clears `scenarioPendingDeletion` before the button's action runs,
+    /// so the delete must not depend on it still being set.
     @Test
-    func confirmDeletionWithoutAPendingScenarioDoesNothing() async {
-        await viewModel.confirmDeletion()
+    func confirmDeletionStillDeletesWhenThePendingScenarioWasAlreadyCleared() async {
+        let scenario = Scenario.fixture(name: "Movie time").build()
+        service.setScenarios([scenario])
+        await viewModel.load()
+        viewModel.requestDeletion(of: scenario)
+        viewModel.cancelDeletion()
 
-        #expect(service.deletedScenarioIds.isEmpty)
+        await viewModel.confirmDeletion(of: scenario)
+
+        #expect(service.deletedScenarioIds == [scenario.externalId])
+        #expect(viewModel.scenarios.isEmpty)
     }
 
     // MARK: - editor presentation

@@ -23,19 +23,15 @@ struct ScenarioDraft: Hashable {
         ScenarioTriggerLogic(mode: logicMode, customExpression: customLogic)
     }
 
-    var validationError: String? {
-        if !ScenarioLimits.nameLength.contains(name.trimmed.count) {
-            return "Name must be \(ScenarioLimits.nameLength.lowerBound)"
-                + "–\(ScenarioLimits.nameLength.upperBound) characters."
-        }
-        if !description.isBlank, !ScenarioLimits.descriptionLength.contains(description.trimmed.count) {
-            return "Description must be \(ScenarioLimits.descriptionLength.lowerBound)"
-                + "–\(ScenarioLimits.descriptionLength.upperBound) characters, or left empty."
-        }
-        if !group.isBlank, !ScenarioGroupName.isValid(groupApiName) {
-            return "Group must be \(ScenarioLimits.groupNameLength.lowerBound)"
-                + "–\(ScenarioLimits.groupNameLength.upperBound) letters, digits or underscores, and not digits only."
-        }
+    var validationError: String? { fieldError ?? structureError }
+
+    /// The first complaint about one of the editor's bounded text fields.
+    var fieldError: String? {
+        ScenarioTextField.allCases.lazy.compactMap { error(for: $0) }.first
+    }
+
+    /// What stops the hub from accepting the draft beyond the individual fields.
+    var structureError: String? {
         if sources.isEmpty {
             return "Add at least one trigger."
         }
@@ -55,6 +51,38 @@ struct ScenarioDraft: Hashable {
             return "Combine the triggers with numbers 1–\(sources.count), AND and OR — each trigger exactly once."
         }
         return nil
+    }
+
+    /// Why the hub would reject this field, or `nil` when its value is acceptable.
+    func error(for field: ScenarioTextField) -> String? {
+        switch field {
+        case .name:
+            if ScenarioLimits.nameLength.contains(name.trimmed.count) { return nil }
+            return "Name must be \(ScenarioLimits.nameLength.lowerBound)"
+                + "–\(ScenarioLimits.nameLength.upperBound) characters."
+
+        case .description:
+            if description.isBlank { return nil }
+            if ScenarioLimits.descriptionLength.contains(description.trimmed.count) { return nil }
+            return "Description must be \(ScenarioLimits.descriptionLength.lowerBound)"
+                + "–\(ScenarioLimits.descriptionLength.upperBound) characters, or left empty."
+
+        case .group:
+            if group.isBlank { return nil }
+            if ScenarioGroupName.isValid(groupApiName) { return nil }
+            return "Group must be \(ScenarioLimits.groupNameLength.lowerBound)"
+                + "–\(ScenarioLimits.groupNameLength.upperBound) letters, digits or underscores, and not digits only."
+        }
+    }
+
+    /// `true` once the field is past its maximum. More typing cannot fix that, so the editor
+    /// complains straight away instead of waiting for a save.
+    func exceedsLimit(_ field: ScenarioTextField) -> Bool {
+        switch field {
+        case .name: return name.trimmed.count > ScenarioLimits.nameLength.upperBound
+        case .description: return description.trimmed.count > ScenarioLimits.descriptionLength.upperBound
+        case .group: return groupApiName.count > ScenarioLimits.groupNameLength.upperBound
+        }
     }
 
     var isValid: Bool { validationError == nil }

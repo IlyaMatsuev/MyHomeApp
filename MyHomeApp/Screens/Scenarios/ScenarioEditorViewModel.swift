@@ -23,20 +23,33 @@ final class ScenarioEditorViewModel: Identifiable {
     let id = UUID()
     let mode: Mode
     let devices: [Device]
-    let knownGroups: [String]
     let knownCommands: [ScenarioKnownCommand]
+
+    /// Groups offered as pills. A name added here lives only in this editing session — the hub
+    /// creates the group when the scenario itself is saved.
+    private(set) var knownGroups: [String]
 
     var draft: ScenarioDraft
 
     private(set) var loading = false
     private(set) var errorMessage: String?
 
+    /// Set by the first Save tap. Until then the editor only complains about fields the user has
+    /// already overrun, so a half-typed form isn't covered in red.
+    private(set) var didAttemptSave = false
+
     private let service: ScenarioService
     private let onSaved: @MainActor (Scenario) -> Void
 
     var canSave: Bool { !loading && draft.isValid }
 
-    var validationMessage: String? { draft.validationError }
+    var validationMessage: String? { draft.structureError }
+
+    /// `true` when the typed group is a valid name the pills don't offer yet.
+    var canAddTypedGroup: Bool {
+        let apiName = draft.groupApiName
+        return ScenarioGroupName.isValid(apiName) && !knownGroups.contains(apiName)
+    }
 
     var showsLogicEditor: Bool {
         draft.sources.count > 1 || draft.logicMode == .custom
@@ -45,6 +58,10 @@ final class ScenarioEditorViewModel: Identifiable {
     var logicErrorMessage: String? {
         guard draft.logicMode == .custom, !draft.customLogic.isBlank else { return nil }
         guard !draft.logic.isValid(sourceCount: draft.sources.count) else { return nil }
+        if !ScenarioLimits.logicLength.contains(draft.customLogic.trimmed.count) {
+            return "Expression must be \(ScenarioLimits.logicLength.lowerBound)"
+                + "–\(ScenarioLimits.logicLength.upperBound) characters."
+        }
         return "Use each trigger number 1–\(max(draft.sources.count, 1)) exactly once, joined by AND or OR."
     }
 
@@ -64,6 +81,22 @@ final class ScenarioEditorViewModel: Identifiable {
         self.knownCommands = knownCommands
         self.service = service
         self.onSaved = onSaved
+    }
+
+    // MARK: - Field validation
+
+    /// The message to show under a field, or `nil` while the editor should stay quiet about it.
+    func error(for field: ScenarioTextField) -> String? {
+        guard didAttemptSave || draft.exceedsLimit(field) else { return nil }
+        return draft.error(for: field)
+    }
+
+    // MARK: - Groups
+
+    /// Offers the typed group as a pill so it reads as chosen. Nothing is sent to the hub.
+    func addTypedGroup() {
+        guard canAddTypedGroup else { return }
+        knownGroups = (knownGroups + [draft.groupApiName]).sorted()
     }
 
     // MARK: - Device lookups
@@ -179,10 +212,8 @@ final class ScenarioEditorViewModel: Identifiable {
     // MARK: - Saving
 
     func save() async {
-        guard canSave else {
-            errorMessage = draft.validationError
-            return
-        }
+        didAttemptSave = true
+        guard canSave else { return }
 
         errorMessage = nil
         loading = true

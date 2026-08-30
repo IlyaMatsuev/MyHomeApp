@@ -98,7 +98,16 @@ final class ScenariosViewModel {
 
     func load() async {
         state = .loading
+        await reload(keepingContentOnFailure: false)
+    }
 
+    /// Pull to refresh. The list stays on screen if the hub is briefly unreachable — the pulled
+    /// spinner and a toast are enough to say the refresh failed.
+    func refresh() async {
+        await reload(keepingContentOnFailure: true)
+    }
+
+    private func reload(keepingContentOnFailure: Bool) async {
         async let devicesPage = deviceService.fetchDevices()
 
         do {
@@ -106,9 +115,11 @@ final class ScenariosViewModel {
             scenarios = page.items.sorted()
             state = .loaded
         } catch {
-            scenarios = []
-            state = .failed(ScenarioError.text(for: error))
             toastStore.error(ScenarioError.text(for: error))
+            if !keepingContentOnFailure {
+                scenarios = []
+                state = .failed(ScenarioError.text(for: error))
+            }
         }
 
         do {
@@ -156,8 +167,9 @@ final class ScenariosViewModel {
         scenarioPendingDeletion = nil
     }
 
-    func confirmDeletion() async {
-        guard let scenario = scenarioPendingDeletion else { return }
+    /// The scenario comes from the dialog, not from `scenarioPendingDeletion`: dismissing the
+    /// dialog clears that first, which used to swallow the delete entirely.
+    func confirmDeletion(of scenario: Scenario) async {
         scenarioPendingDeletion = nil
         await delete(scenario)
     }

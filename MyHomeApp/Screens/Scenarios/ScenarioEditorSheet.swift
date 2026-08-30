@@ -45,7 +45,7 @@ struct ScenarioEditorSheet: View {
                 Button("Save") {
                     Task { await viewModel.save() }
                 }
-                .disabled(!viewModel.canSave)
+                .opacity(viewModel.canSave ? 1 : 0.5)
             }
         }
     }
@@ -58,13 +58,15 @@ struct ScenarioEditorSheet: View {
                 title: "Name",
                 placeholder: "Warm light on",
                 text: $viewModel.draft.name,
-                autocapitalization: .sentences
+                autocapitalization: .sentences,
+                error: viewModel.error(for: .name)
             )
             FormTextField(
                 title: "Description",
                 placeholder: "Optional",
                 text: $viewModel.draft.description,
-                autocapitalization: .sentences
+                autocapitalization: .sentences,
+                error: viewModel.error(for: .description)
             )
             groupField
             Toggle("Active", isOn: $viewModel.draft.active)
@@ -80,7 +82,8 @@ struct ScenarioEditorSheet: View {
                 placeholder: ScenarioGroupName.ungroupedLabel,
                 text: $viewModel.draft.group,
                 autocapitalization: .words,
-                focus: $isGroupFieldFocused
+                focus: $isGroupFieldFocused,
+                error: viewModel.error(for: .group)
             )
 
             if !viewModel.draft.group.isBlank {
@@ -101,10 +104,12 @@ struct ScenarioEditorSheet: View {
                 }
 
                 groupPill("+", isSelected: false) {
-                    viewModel.draft.group = ""
-                    isGroupFieldFocused = true
+                    viewModel.addTypedGroup()
+                    isGroupFieldFocused = false
                 }
-                .accessibilityLabel("New group")
+                .disabled(!viewModel.canAddTypedGroup)
+                .opacity(viewModel.canAddTypedGroup ? 1 : 0.4)
+                .accessibilityLabel("Add group")
             }
         }
         .scrollClipDisabled()

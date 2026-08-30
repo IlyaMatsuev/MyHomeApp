@@ -20,6 +20,7 @@ struct ScenariosView: View {
             VStack(spacing: 0) {
                 header
                 content(selectedGroup: $viewModel.selectedGroup)
+                    .refreshable { await viewModel.refresh() }
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
@@ -44,7 +45,7 @@ struct ScenariosView: View {
                 presenting: viewModel.scenarioPendingDeletion
             ) { scenario in
                 Button("Delete \"\(scenario.name)\"", role: .destructive) {
-                    Task { await viewModel.confirmDeletion() }
+                    Task { await viewModel.confirmDeletion(of: scenario) }
                 }
                 Button("Cancel", role: .cancel) {
                     viewModel.cancelDeletion()
@@ -83,21 +84,31 @@ struct ScenariosView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
         case .failed(let message):
-            ContentUnavailableView(
-                "Couldn't load scenarios",
-                systemImage: "exclamationmark.triangle",
-                description: Text(message)
-            )
+            placeholder {
+                ContentUnavailableView(
+                    "Couldn't load scenarios",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(message)
+                )
+            }
 
         case .loaded:
             if viewModel.scenarios.isEmpty {
-                emptyState
+                placeholder { emptyState }
             } else {
                 VStack(spacing: 0) {
                     FilterChipsBar(chips: groupChips, selection: selectedGroup)
                     ScenarioList(sections: viewModel.visibleSections).environment(viewModel)
                 }
             }
+        }
+    }
+
+    /// Keeps a full-screen placeholder pullable, so refreshing works when there is no list to pull.
+    private func placeholder<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        ScrollView {
+            content()
+                .containerRelativeFrame(.vertical, alignment: .center)
         }
     }
 

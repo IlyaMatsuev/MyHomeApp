@@ -147,12 +147,13 @@ struct ScenarioEditorViewModelTests {
     // MARK: - save() — validation gate
 
     @Test
-    func saveWithAnIncompleteDraftReportsAndCallsNothing() async {
+    func saveWithAnIncompleteDraftRevealsTheFieldErrorsAndCallsNothing() async {
         let viewModel = makeViewModel()
 
         await viewModel.save()
 
-        #expect(viewModel.errorMessage != nil)
+        #expect(viewModel.didAttemptSave)
+        #expect(viewModel.error(for: .name) != nil, "The empty name is worth complaining about once Save is tried")
         #expect(service.createScenarioPayloads.isEmpty)
         #expect(recorder.saved.isEmpty)
     }
