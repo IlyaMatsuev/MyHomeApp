@@ -207,6 +207,28 @@ struct ScenarioDraftTests {
         )
     }
 
+    // MARK: - schedule sources
+
+    @Test
+    func aSolarAdjustmentReplacesACronTheEditorNoLongerShows() {
+        var source = ScenarioSourceDraft(kind: .cron, cron: "every evening")
+        #expect(!source.isValid)
+
+        source.adjustTo = .sunset
+
+        #expect(source.cron == ScenarioSourceDraft.defaultCron)
+        #expect(source.isValid)
+    }
+
+    @Test
+    func aSolarAdjustmentKeepsACronTheHubCanUse() {
+        var source = ScenarioSourceDraft(kind: .cron, cron: "0 20 * * 1-5")
+
+        source.adjustTo = .sunrise
+
+        #expect(source.cron == "0 20 * * 1-5", "The hub only rewrites the time, the days still matter")
+    }
+
     // MARK: - logic mode switching
 
     @Test
