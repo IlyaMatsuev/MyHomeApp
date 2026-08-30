@@ -99,8 +99,8 @@ final class ScenariosViewModel {
             state = .loaded
         } catch {
             scenarios = []
-            state = .failed(ScenarioErrorMessage.text(for: error))
-            toastStore.error(ScenarioErrorMessage.text(for: error))
+            state = .failed(ScenarioError.text(for: error))
+            toastStore.error(ScenarioError.text(for: error))
         }
 
         do {
@@ -131,7 +131,7 @@ final class ScenariosViewModel {
             replace(updated)
         } catch {
             replace(previous)
-            toastStore.error(ScenarioErrorMessage.text(for: error))
+            toastStore.error(ScenarioError.text(for: error))
             Self.logger.error("Failed to toggle scenario \"\(scenario.id)\": \(error.localizedDescription)")
         }
 
@@ -161,7 +161,7 @@ final class ScenariosViewModel {
             try await service.deleteScenario(scenarioId: scenario.id)
             scenarios.removeAll { $0.id == scenario.id }
         } catch {
-            toastStore.error(ScenarioErrorMessage.text(for: error))
+            toastStore.error(ScenarioError.text(for: error))
             Self.logger.error("Failed to delete scenario \"\(scenario.id)\": \(error.localizedDescription)")
         }
 

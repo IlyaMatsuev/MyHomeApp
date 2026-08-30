@@ -225,7 +225,7 @@ struct ScenarioEditorViewModelTests {
 
         await viewModel.save()
 
-        #expect(viewModel.errorMessage == ScenarioErrorMessage.generic)
+        #expect(viewModel.errorMessage == ScenarioError.generic)
     }
 
     // MARK: - trigger source editing

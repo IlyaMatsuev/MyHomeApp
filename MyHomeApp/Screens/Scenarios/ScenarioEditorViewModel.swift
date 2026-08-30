@@ -170,7 +170,7 @@ final class ScenarioEditorViewModel: Identifiable {
             let saved = try await persist(draft.payload)
             onSaved(saved)
         } catch {
-            errorMessage = ScenarioErrorMessage.text(for: error)
+            errorMessage = ScenarioError.text(for: error)
             Self.logger.error("Failed to save a scenario: \(error.localizedDescription)")
         }
     }

@@ -1,7 +1,6 @@
 import Foundation
 
-/// User-facing wording for failures on the Scenarios screens, shared by the list and the editor.
-enum ScenarioErrorMessage {
+enum ScenarioError {
     static let generic = "Oops... Something went wrong"
 
     static func text(for error: Error) -> String {

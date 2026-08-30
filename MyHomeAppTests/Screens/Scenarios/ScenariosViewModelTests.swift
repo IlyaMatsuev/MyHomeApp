@@ -58,7 +58,7 @@ struct ScenariosViewModelTests {
 
         await viewModel.load()
 
-        #expect(viewModel.state == .failed(ScenarioErrorMessage.generic))
+        #expect(viewModel.state == .failed(ScenarioError.generic))
         #expect(viewModel.scenarios.isEmpty)
         let toast = try #require(toastStore.current)
         #expect(toast.kind == .error)
@@ -70,7 +70,7 @@ struct ScenariosViewModelTests {
 
         await viewModel.load()
 
-        #expect(viewModel.state == .failed(ScenarioErrorMessage.text(for: HubAPIError.unauthorized)))
+        #expect(viewModel.state == .failed(ScenarioError.text(for: HubAPIError.unauthorized)))
     }
 
     @Test
