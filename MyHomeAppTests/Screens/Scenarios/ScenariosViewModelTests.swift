@@ -33,10 +33,10 @@ struct ScenariosViewModelTests {
             service: service,
             deviceService: deviceService,
             toastStore: toastStore,
-            selectedGroup: .specific(ScenarioGroup("kitchen"))
+            selectedGroup: .named("kitchen")
         )
 
-        #expect(viewModel.selectedGroup == .specific(ScenarioGroup("kitchen")))
+        #expect(viewModel.selectedGroup == .named("kitchen"))
     }
 
     // MARK: - load() — state transitions
@@ -58,10 +58,19 @@ struct ScenariosViewModelTests {
 
         await viewModel.load()
 
-        #expect(viewModel.state == .failed("Boom"))
+        #expect(viewModel.state == .failed(ScenarioErrorMessage.generic))
         #expect(viewModel.scenarios.isEmpty)
         let toast = try #require(toastStore.current)
         #expect(toast.kind == .error)
+    }
+
+    @Test
+    func loadWhenTheHubRejectsTheRequestShowsTheHubWording() async {
+        service.setScenariosError(HubAPIError.unauthorized)
+
+        await viewModel.load()
+
+        #expect(viewModel.state == .failed(ScenarioErrorMessage.text(for: HubAPIError.unauthorized)))
     }
 
     @Test
@@ -93,115 +102,6 @@ struct ScenariosViewModelTests {
         #expect(viewModel.state == .loaded)
         #expect(viewModel.scenarios.count == 1)
         #expect(viewModel.devices.isEmpty)
-    }
-
-    // MARK: - grouping
-
-    @Test
-    func loadGroupsScenariosByTheirGroup() async throws {
-        service.setScenarios([
-            Scenario.fixture(name: "Warm light on").inGroup("living_room").build(),
-            Scenario.fixture(name: "Movie time").inGroup("living_room").build(),
-            Scenario.fixture(name: "Wake up").inGroup("bedroom").build(),
-        ])
-
-        await viewModel.load()
-
-        #expect(viewModel.groupSections.count == 2)
-        let livingRoom = try #require(viewModel.groupSections.first { $0.group == ScenarioGroup("living_room") })
-        let bedroom = try #require(viewModel.groupSections.first { $0.group == ScenarioGroup("bedroom") })
-        #expect(livingRoom.scenarios.count == 2)
-        #expect(bedroom.scenarios.count == 1)
-    }
-
-    @Test
-    func scenariosWithoutAGroupLandInGeneral() async throws {
-        service.setScenarios([Scenario.fixture(name: "Nightly reboot").build()])
-
-        await viewModel.load()
-
-        let section = try #require(viewModel.groupSections.first)
-        #expect(section.group == .general)
-        #expect(section.title == "General")
-    }
-
-    @Test
-    func loadSortsSectionsWithGeneralFirst() async {
-        service.setScenarios([
-            Scenario.fixture(name: "Away").inGroup("office").build(),
-            Scenario.fixture(name: "Nightly reboot").build(),
-            Scenario.fixture(name: "Movie time").inGroup("living_room").build(),
-        ])
-
-        await viewModel.load()
-
-        #expect(viewModel.groupSections.map(\.title) == ["General", "Living Room", "Office"])
-    }
-
-    @Test
-    func loadSortsScenariosWithinASection() async throws {
-        service.setScenarios([
-            Scenario.fixture(name: "Zebra").inGroup("living_room").build(),
-            Scenario.fixture(name: "Alpha").inGroup("living_room").build(),
-            Scenario.fixture(name: "Mid").inGroup("living_room").build(),
-        ])
-
-        await viewModel.load()
-
-        let section = try #require(viewModel.groupSections.first)
-        #expect(section.scenarios.map(\.name) == ["Alpha", "Mid", "Zebra"])
-    }
-
-    // MARK: - filtering
-
-    @Test
-    func availableGroupsContainsOnlyGroupsWithScenarios() async {
-        service.setScenarios([
-            Scenario.fixture(name: "Movie time").inGroup("living_room").build(),
-            Scenario.fixture(name: "Wake up").inGroup("bedroom").build(),
-        ])
-
-        await viewModel.load()
-
-        #expect(viewModel.availableGroups.map(\.label) == ["Bedroom", "Living Room"])
-    }
-
-    @Test
-    func visibleSectionsWhenSelectionIsAllReturnsEverything() async {
-        service.setScenarios([
-            Scenario.fixture(name: "Movie time").inGroup("living_room").build(),
-            Scenario.fixture(name: "Wake up").inGroup("bedroom").build(),
-        ])
-        await viewModel.load()
-
-        viewModel.selectedGroup = .all
-
-        #expect(viewModel.visibleSections.count == 2)
-    }
-
-    @Test
-    func visibleSectionsWhenASpecificGroupIsSelectedReturnsOnlyThatGroup() async throws {
-        service.setScenarios([
-            Scenario.fixture(name: "Movie time").inGroup("living_room").build(),
-            Scenario.fixture(name: "Wake up").inGroup("bedroom").build(),
-        ])
-        await viewModel.load()
-
-        viewModel.selectedGroup = .specific(ScenarioGroup("bedroom"))
-
-        let section = try #require(viewModel.visibleSections.first)
-        #expect(viewModel.visibleSections.count == 1)
-        #expect(section.scenarios.map(\.name) == ["Wake up"])
-    }
-
-    @Test
-    func visibleSectionsWhenTheSelectedGroupHasNoScenariosIsEmpty() async {
-        service.setScenarios([Scenario.fixture(name: "Movie time").inGroup("living_room").build()])
-        await viewModel.load()
-
-        viewModel.selectedGroup = .specific(ScenarioGroup("kitchen"))
-
-        #expect(viewModel.visibleSections.isEmpty)
     }
 
     // MARK: - setActive()

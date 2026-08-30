@@ -74,6 +74,13 @@ struct ScenarioListRow: View {
     private var summary: String {
         let triggers = scenario.trigger.sources.count
         let actions = scenario.actions.count
-        return "\(triggers) \(triggers == 1 ? "trigger" : "triggers") · \(actions) \(actions == 1 ? "action" : "actions")"
+        var parts = [
+            "\(triggers) \(triggers == 1 ? "trigger" : "triggers")",
+            "\(actions) \(actions == 1 ? "action" : "actions")"
+        ]
+        if let repeatTimes = scenario.repeatTimes {
+            parts.append("\(repeatTimes) \(repeatTimes == 1 ? "run" : "runs") left")
+        }
+        return parts.joined(separator: " · ")
     }
 }

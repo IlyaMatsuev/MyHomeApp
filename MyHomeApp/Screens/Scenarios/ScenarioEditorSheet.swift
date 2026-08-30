@@ -23,6 +23,7 @@ struct ScenarioEditorSheet: View {
                 detailsSection
                 triggerSection
                 actionsSection
+                validationText
                 errorText
             }
             .padding(20)
@@ -73,12 +74,12 @@ struct ScenarioEditorSheet: View {
 
     private var groupField: some View {
         VStack(alignment: .leading, spacing: 8) {
-            FormTextField(title: "Group", placeholder: "General", text: $viewModel.draft.group)
+            FormTextField(title: "Group", placeholder: ScenarioGroupName.ungroupedLabel, text: $viewModel.draft.group)
 
             if !viewModel.knownGroups.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(viewModel.knownGroups) { group in
+                        ForEach(viewModel.knownGroups, id: \.self) { group in
                             groupSuggestion(group)
                         }
                     }
@@ -88,11 +89,11 @@ struct ScenarioEditorSheet: View {
         }
     }
 
-    private func groupSuggestion(_ group: ScenarioGroup) -> some View {
+    private func groupSuggestion(_ group: String) -> some View {
         Button {
-            viewModel.draft.group = group.isGeneral ? "" : group.rawValue
+            viewModel.draft.group = group
         } label: {
-            Text(group.label)
+            Text(ScenarioGroupName.label(for: group))
                 .font(.caption)
                 .padding(.vertical, 6)
                 .padding(.horizontal, 10)
@@ -250,6 +251,14 @@ struct ScenarioEditorSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// The remaining blocker on the draft — the reason the Save button is disabled.
+    @ViewBuilder
+    private var validationText: some View {
+        if let message = viewModel.validationMessage {
+            hint(message)
+        }
+    }
+
     @ViewBuilder
     private var errorText: some View {
         if let message = viewModel.errorMessage {
@@ -264,7 +273,7 @@ struct ScenarioEditorSheet: View {
             mode: .create,
             draft: ScenarioDraft(),
             devices: MockDeviceService.allDevices,
-            knownGroups: [ScenarioGroup("living_room")],
+            knownGroups: ["living_room"],
             service: MockScenarioService(),
             onSaved: { _ in }
         )
@@ -278,7 +287,7 @@ struct ScenarioEditorSheet: View {
             mode: .edit(scenario.externalId),
             draft: ScenarioDraft(scenario: scenario),
             devices: MockDeviceService.allDevices,
-            knownGroups: [scenario.displayGroup],
+            knownGroups: [scenario.group].compactMap { $0 },
             service: MockScenarioService(),
             onSaved: { _ in }
         )

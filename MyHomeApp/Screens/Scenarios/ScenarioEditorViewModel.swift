@@ -10,7 +10,6 @@ import os
 @MainActor
 final class ScenarioEditorViewModel: Identifiable {
     private static let logger = Logger(subsystem: "MyHomeApp", category: "ScenarioEditorViewModel")
-    private static let incompleteDraftError = "Give the scenario a name, at least one trigger and one action."
 
     enum Mode: Hashable {
         case create
@@ -27,7 +26,7 @@ final class ScenarioEditorViewModel: Identifiable {
     let id = UUID()
     let mode: Mode
     let devices: [Device]
-    let knownGroups: [ScenarioGroup]
+    let knownGroups: [String]
 
     var draft: ScenarioDraft
 
@@ -38,6 +37,9 @@ final class ScenarioEditorViewModel: Identifiable {
     private let onSaved: @MainActor (Scenario) -> Void
 
     var canSave: Bool { !loading && draft.isValid }
+
+    /// Why saving is still blocked, shown under the form. `nil` once the draft is ready to send.
+    var validationMessage: String? { draft.validationError }
 
     /// Combining triggers only means something past the first one — but a custom expression must stay
     /// reachable whatever the source count, otherwise deleting sources can strand an expression that
@@ -50,14 +52,14 @@ final class ScenarioEditorViewModel: Identifiable {
     var logicErrorMessage: String? {
         guard draft.logicMode == .custom, !draft.customLogic.isBlank else { return nil }
         guard !draft.logic.isValid(sourceCount: draft.sources.count) else { return nil }
-        return "Use trigger numbers 1–\(max(draft.sources.count, 1)) with AND, OR, NOT and parentheses."
+        return "Use each trigger number 1–\(max(draft.sources.count, 1)) exactly once, joined by AND or OR."
     }
 
     init(
         mode: Mode,
         draft: ScenarioDraft,
         devices: [Device],
-        knownGroups: [ScenarioGroup],
+        knownGroups: [String],
         service: ScenarioService,
         onSaved: @escaping @MainActor (Scenario) -> Void
     ) {
@@ -84,13 +86,19 @@ final class ScenarioEditorViewModel: Identifiable {
             .sorted()
     }
 
+    func measurementKeys(ofDeviceId deviceId: String) -> [String] {
+        guard let measurements = device(withId: deviceId)?.measurements else { return [] }
+        return measurements.keys.sorted()
+    }
+
     // MARK: - Trigger sources
 
     func addSource(kind: ScenarioTriggerSource.Kind) {
         var source = ScenarioSourceDraft(kind: kind)
         if kind == .device, let device = devices.first {
             source.deviceId = device.externalId
-            source.matchKey = toggleControlKeys(ofDeviceId: device.externalId).first ?? ScenarioSourceDraft.defaultControlKey
+            source.matchKey = toggleControlKeys(ofDeviceId: device.externalId).first
+                ?? ScenarioSourceDraft.defaultControlKey
         }
         draft.sources.append(source)
     }
@@ -102,22 +110,24 @@ final class ScenarioEditorViewModel: Identifiable {
     func selectDevice(_ deviceId: String, forSource source: ScenarioSourceDraft) {
         guard let index = draft.sources.firstIndex(where: { $0.id == source.id }) else { return }
         draft.sources[index].deviceId = deviceId
-        if draft.sources[index].matchKind == .control {
-            draft.sources[index].matchKey = toggleControlKeys(ofDeviceId: deviceId).first
-                ?? ScenarioSourceDraft.defaultControlKey
-        }
+        // A command name is free text the user typed; control and measurement keys belong to the device.
+        guard draft.sources[index].matchKind != .command else { return }
+        draft.sources[index].matchKey = defaultMatchKey(for: draft.sources[index].matchKind, deviceId: deviceId)
     }
 
     func selectMatchKind(_ matchKind: ScenarioSourceDraft.MatchKind, forSource source: ScenarioSourceDraft) {
         guard let index = draft.sources.firstIndex(where: { $0.id == source.id }) else { return }
         draft.sources[index].matchKind = matchKind
-        switch matchKind {
-        case .command:
-            draft.sources[index].matchKey = ScenarioSourceDraft.defaultCommandKey
+        draft.sources[index].matchKey = defaultMatchKey(for: matchKind, deviceId: draft.sources[index].deviceId)
+    }
 
-        case .control:
-            draft.sources[index].matchKey = toggleControlKeys(ofDeviceId: draft.sources[index].deviceId).first
-                ?? ScenarioSourceDraft.defaultControlKey
+    /// The key to preselect when the device or the matched section changes. Empty when the app knows
+    /// no keys for that section and the user has to type one.
+    private func defaultMatchKey(for matchKind: ScenarioSourceDraft.MatchKind, deviceId: String) -> String {
+        switch matchKind {
+        case .command: return ScenarioSourceDraft.defaultCommandKey
+        case .control: return toggleControlKeys(ofDeviceId: deviceId).first ?? ScenarioSourceDraft.defaultControlKey
+        case .measurement: return measurementKeys(ofDeviceId: deviceId).first ?? ""
         }
     }
 
@@ -127,7 +137,8 @@ final class ScenarioEditorViewModel: Identifiable {
         var action = ScenarioActionDraft()
         if let device = devices.first {
             action.deviceId = device.externalId
-            action.controlKey = toggleControlKeys(ofDeviceId: device.externalId).first ?? ScenarioActionDraft.defaultControlKey
+            action.controlKey = toggleControlKeys(ofDeviceId: device.externalId).first
+                ?? ScenarioActionDraft.defaultControlKey
         }
         draft.actions.append(action)
     }
@@ -147,7 +158,7 @@ final class ScenarioEditorViewModel: Identifiable {
 
     func save() async {
         guard canSave else {
-            errorMessage = Self.incompleteDraftError
+            errorMessage = draft.validationError
             return
         }
 

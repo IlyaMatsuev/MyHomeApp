@@ -36,7 +36,7 @@ struct MockScenarioService: ScenarioService {
                     )
                 ],
                 active: true,
-                group: ScenarioGroup("living_room"),
+                group: "living_room",
                 createdAt: now,
                 updatedAt: now
             ),
@@ -55,6 +55,7 @@ struct MockScenarioService: ScenarioService {
                     )
                 ],
                 active: false,
+                repeatTimes: 3,
                 createdAt: now,
                 updatedAt: now
             )
@@ -102,6 +103,7 @@ struct MockScenarioService: ScenarioService {
             actions: scenario.actions,
             active: active,
             group: scenario.group,
+            repeatTimes: scenario.repeatTimes,
             createdAt: scenario.createdAt,
             updatedAt: Date()
         )

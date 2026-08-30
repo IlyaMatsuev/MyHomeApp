@@ -80,11 +80,15 @@ struct ScenariosView: View {
                 emptyState
             } else {
                 VStack(spacing: 0) {
-                    ScenarioGroupFilterList(availableGroups: viewModel.availableGroups, selection: selectedGroup)
+                    FilterChipsBar(chips: groupChips, selection: selectedGroup)
                     ScenarioList(sections: viewModel.visibleSections).environment(viewModel)
                 }
             }
         }
+    }
+
+    private var groupChips: [FilterChipsBar<ScenarioGroupFilter>.Chip] {
+        viewModel.groupFilters.map { .init($0, label: $0.label) }
     }
 
     private var emptyState: some View {

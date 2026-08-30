@@ -4,7 +4,7 @@ import Testing
 @testable import MyHomeApp
 
 struct ScenarioCodableTests {
-    /// The payload from the feature request, verbatim.
+    /// A `Scenarios.ScenarioResponse` as the hub returns it.
     private static let sampleJSON = """
     {
         "name": "Warm light on",
@@ -41,7 +41,7 @@ struct ScenarioCodableTests {
             ],
             "logic": "(1 OR 2) AND 3"
         },
-        "devices": [
+        "actions": [
             {
                 "externalId": "5f9ffdce-bf7b-4fdf-9a3e-7c62edf77ca0",
                 "set": {
@@ -74,7 +74,8 @@ struct ScenarioCodableTests {
         #expect(scenario.name == "Warm light on")
         #expect(scenario.description == "Switches on the warm light in the living room")
         #expect(scenario.active == true)
-        #expect(scenario.group == ScenarioGroup("living_room"))
+        #expect(scenario.group == "living_room")
+        #expect(scenario.repeatTimes == nil, "An omitted repeatTimes means the scenario repeats forever")
     }
 
     @Test
@@ -141,12 +142,14 @@ struct ScenarioCodableTests {
     // MARK: - decoding tolerances
 
     @Test
-    func decodeWithoutOptionalFieldsFallsBackToDefaults() throws {
+    func decodeWithoutTheOptionalFieldsSucceeds() throws {
         let json = """
         {
             "externalId": "scenario-1",
             "name": "Bare",
-            "trigger": { "sources": [] },
+            "active": true,
+            "trigger": { "sources": [{ "type": "cron", "cron": "0 8 * * *" }], "logic": "1" },
+            "actions": [{ "externalId": "device-1", "set": { "controls": { "on": true } } }],
             "createdAt": "2025-08-30T16:04:38.229Z",
             "updatedAt": "2025-08-30T16:04:38.229Z"
         }
@@ -155,12 +158,18 @@ struct ScenarioCodableTests {
         let scenario = try JSONDecoder.hubAPI.decode(Scenario.self, from: Data(json.utf8))
 
         #expect(scenario.description == nil)
-        #expect(scenario.group == nil)
-        #expect(scenario.displayGroup == .general)
-        #expect(scenario.trigger.logic == nil)
-        #expect(scenario.trigger.sources.isEmpty)
-        #expect(scenario.actions.isEmpty)
-        #expect(scenario.active == true, "The hub omitting \"active\" should not disable the scenario")
+        #expect(scenario.group == nil, "No group at all — the hub has no \"none\" group")
+        #expect(scenario.repeatTimes == nil)
+    }
+
+    @Test
+    func decodeReadsRepeatTimes() throws {
+        let json = Self.sampleJSON
+            .replacingOccurrences(of: "\"active\": true", with: "\"active\": true, \"repeatTimes\": 3")
+
+        let scenario = try JSONDecoder.hubAPI.decode(Scenario.self, from: Data(json.utf8))
+
+        #expect(scenario.repeatTimes == 3)
     }
 
     @Test
@@ -169,8 +178,65 @@ struct ScenarioCodableTests {
 
         let scenario = try JSONDecoder.hubAPI.decode(Scenario.self, from: Data(json.utf8))
 
-        #expect(scenario.displayGroup == ScenarioGroup("winter_garden"))
-        #expect(scenario.displayGroup.label == "Winter Garden")
+        #expect(scenario.group == "winter_garden")
+        #expect(ScenarioGroupName.label(for: scenario.group) == "Winter Garden")
+    }
+
+    // MARK: - the sections the editor cannot express
+
+    @Test
+    func decodeReadsAMeasurementTriggerSource() throws {
+        let json = """
+        {
+            "type": "device",
+            "device": {
+                "externalId": "device-1",
+                "measurements": { "are": { "temperature": 21 } }
+            }
+        }
+        """
+
+        let source = try JSONDecoder.hubAPI.decode(ScenarioTriggerSource.self, from: Data(json.utf8))
+
+        #expect(
+            source == .device(
+                ScenarioDeviceTrigger(
+                    externalId: "device-1",
+                    measurements: ScenarioValueMatch(are: ["temperature": AnyCodable(21)])
+                )
+            )
+        )
+    }
+
+    @Test
+    func actionSetRoundTripsBothSections() throws {
+        let json = """
+        {
+            "externalId": "device-1",
+            "set": { "controls": { "on": true }, "measurements": { "target": 21 } }
+        }
+        """
+
+        let action = try JSONDecoder.hubAPI.decode(ScenarioAction.self, from: Data(json.utf8))
+        #expect(action.set.controls == ["on": AnyCodable(true)])
+        #expect(action.set.measurements == ["target": AnyCodable(21)])
+
+        let encoded = try JSONSerialization.jsonObject(with: try JSONEncoder().encode(action))
+        let object = try #require(encoded as? [String: Any])
+        let set = try #require(object["set"] as? [String: Any])
+        #expect(set["controls"] != nil)
+        #expect(set["measurements"] != nil)
+    }
+
+    @Test
+    func encodeOmitsAnEmptyActionSection() throws {
+        let action = ScenarioAction(externalId: "device-1", set: ScenarioActionSet(controls: ["on": true]))
+
+        let encoded = try JSONSerialization.jsonObject(with: try JSONEncoder().encode(action))
+        let object = try #require(encoded as? [String: Any])
+        let set = try #require(object["set"] as? [String: Any])
+
+        #expect(set["measurements"] == nil, "The hub rejects an empty section object")
     }
 
     @Test

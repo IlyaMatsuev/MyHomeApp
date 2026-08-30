@@ -19,13 +19,15 @@ Concretely:
 | -------------------------------- | ------------------------------------------------- |
 | Xcode                            | 26.x (latest)                                     |
 | Swift                            | 5.0                                               |
-| iOS Deployment Target            | **18.6** (app target)                             |
+| iOS Deployment Target            | **26.0** (app target)                             |
 | Devices                          | iPhone + iPad (universal, see `Info` orientations)|
 | Concurrency                      | `async`/`await`, `@MainActor` explicit (see below)|
 | UI                               | SwiftUI only (no UIKit screens unless required)   |
 | Default actor isolation          | **nonisolated** (`SWIFT_DEFAULT_ACTOR_ISOLATION`) |
 
-Use iOS 17+ / iOS 18 APIs freely (e.g. Observation framework `@Observable`, `NavigationStack`, `.scrollTargetBehavior`, etc.). Do not reach for iOS 26-only APIs unless explicitly bumping the deployment target.
+Use iOS 26 APIs freely — including the Observation framework (`@Observable`), `NavigationStack`,
+`.scrollTargetBehavior` and anything newer. Nothing in the codebase needs a backwards-compatibility
+`if #available` check any more; delete them rather than carrying them forward.
 
 ## Project structure
 
@@ -66,14 +68,24 @@ MVVM with SwiftUI:
   carry a `UUID`, with `init(foo:)` in and a `payload` out. `Screens/Scenarios/ScenarioDraft.swift` is the
   reference. Don't bend the wire model into a form model.
 - **Wire vocabularies the hub owns stay open.** Fields whose values the hub can extend at will (e.g. a
-  scenario's `group`) are transparent string wrappers, not closed enums, so an unknown value can't fail
-  decoding of a whole page. Closed enums are for vocabularies the app genuinely knows in full.
+  scenario's `group`, which the hub creates on demand) stay plain `String`s, not closed enums, so an
+  unknown value can't fail decoding of a whole page. Closed enums are for vocabularies the app genuinely
+  knows in full (`DeviceRoom`, `DeviceType`).
+- **Mirror the hub's validation, never invent your own.** Where the client re-checks something the hub
+  also checks — field lengths, a name pattern, the trigger logic grammar — the copy exists only to spare
+  the user a round trip, so it must match the hub exactly and say where it came from
+  (`Core/Scenarios/Models/ScenarioLimits.swift`, `ScenarioLogicExpression`). The hub source is the
+  sibling `smarthome` repo; its Postman collection is `api/my-home-hub.postman_collection.json`.
 
 The full conventions are in [.claude/agents/implementer.md](.claude/agents/implementer.md) and [.claude/agents/reviewer.md](.claude/agents/reviewer.md).
 
 ## Build & test
 
-The scheme is **MyHomeApp**. Use an iPhone simulator on iOS 18.x.
+The scheme is **MyHomeApp**. Use the **iPhone 13 mini on iOS 26.5** simulator.
+
+Two simulators share the name `iPhone 13 mini` (one per installed runtime), so **always pin `OS=26.5` in
+the destination** — an unqualified `name=iPhone 13 mini` resolves to whichever xcodebuild picks first, and
+the iOS 18.6 one can no longer run the app at all.
 
 The scheme ships two test plans:
 
@@ -84,18 +96,18 @@ The scheme ships two test plans:
 # Build
 xcodebuild build \
   -scheme MyHomeApp \
-  -destination 'platform=iOS Simulator,name=iPhone 13 mini'
+  -destination 'platform=iOS Simulator,name=iPhone 13 mini,OS=26.5'
 
 # Run unit tests (fast — no UI tests, no coverage)
 xcodebuild test \
   -scheme MyHomeApp \
-  -destination 'platform=iOS Simulator,name=iPhone 13 mini' \
+  -destination 'platform=iOS Simulator,name=iPhone 13 mini,OS=26.5' \
   -testPlan UnitTests
 
 # Run everything incl. UI tests (slow — only when explicitly asked)
 xcodebuild test \
   -scheme MyHomeApp \
-  -destination 'platform=iOS Simulator,name=iPhone 13 mini' \
+  -destination 'platform=iOS Simulator,name=iPhone 13 mini,OS=26.5' \
   -testPlan AllTests
 
 # Lint (requires SwiftLint — see below)
@@ -106,12 +118,12 @@ Discover available simulators with `xcrun simctl list devices available`.
 
 **Before reporting a task done that touched Swift code, you MUST run both of these and report the result:**
 
-1. `xcodebuild build -scheme MyHomeApp -destination 'platform=iOS Simulator,name=iPhone 13 mini'` — project must build
+1. `xcodebuild build -scheme MyHomeApp -destination 'platform=iOS Simulator,name=iPhone 13 mini,OS=26.5'` — project must build
 2. `swiftlint` from the repo root — must have no new errors; address any new warnings your changes introduced
 
 Don't run tests after every change. Run the **UnitTests** plan when the user explicitly asks, or when you've edited files under `MyHomeAppTests/` and need to verify the tests you touched. Always scope to `-testPlan UnitTests` — never run the UI tests (`AllTests`) unless the user explicitly asks for them.
 
-If `iPhone 13 mini` isn't available, check `xcrun simctl list devices available` and pick another iOS 18.x or 26.x simulator. If you cannot run a step (sandbox / tool missing), say so explicitly — do not claim success.
+If `iPhone 13 mini` isn't available, check `xcrun simctl list devices available` and pick another iOS 26.x simulator. If you cannot run a step (sandbox / tool missing), say so explicitly — do not claim success.
 
 ## Linting
 

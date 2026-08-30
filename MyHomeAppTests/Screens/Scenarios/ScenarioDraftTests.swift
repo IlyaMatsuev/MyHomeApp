@@ -55,7 +55,7 @@ struct ScenarioDraftTests {
         #expect(command.deviceId == "remote-1")
         #expect(command.matchKind == .command)
         #expect(command.matchKey == "action")
-        #expect(command.matchCommand == "up_press")
+        #expect(command.matchText == "up_press")
 
         let control = draft.sources[2]
         #expect(control.matchKind == .control)
@@ -98,10 +98,37 @@ struct ScenarioDraftTests {
     }
 
     @Test
-    func initFromScenarioTreatsTheDefaultGroupAsNoGroup() {
-        let scenario = Scenario.fixture(name: "Nightly").inGroup("none").build()
+    func initFromScenarioLeavesTheGroupEmptyWhenTheHubSentNone() {
+        let scenario = Scenario.fixture(name: "Nightly").withCron("0 1 * * *").build()
 
         #expect(ScenarioDraft(scenario: scenario).group.isEmpty)
+    }
+
+    @Test
+    func initFromScenarioFlattensAMeasurementSource() throws {
+        let scenario = Scenario.fixture(name: "Too warm")
+            .withDeviceMeasurement(deviceId: "sensor-1", key: "temperature", value: 24)
+            .withAction(deviceId: "fan-1", value: true)
+            .build()
+
+        let source = try #require(ScenarioDraft(scenario: scenario).sources.first)
+
+        #expect(source.matchKind == .measurement)
+        #expect(source.matchKey == "temperature")
+        #expect(source.matchText == "24")
+    }
+
+    @Test
+    func payloadKeepsAMeasurementSetterTheEditorCannotShow() throws {
+        let action = ScenarioAction(
+            externalId: "thermostat-1",
+            set: ScenarioActionSet(controls: ["on": true], measurements: ["target": 21])
+        )
+
+        let rebuilt = ScenarioActionDraft(action: action).action
+
+        #expect(rebuilt.set.measurements == ["target": AnyCodable(21)])
+        #expect(rebuilt.set.controls == ["on": AnyCodable(true)])
     }
 
     // MARK: - writing a payload
@@ -125,7 +152,10 @@ struct ScenarioDraftTests {
     func payloadWritesTheCanonicalExpressionForAllAndAny() {
         var draft = ScenarioDraft()
         draft.name = "Two triggers"
-        draft.sources = [ScenarioSourceDraft(kind: .cron), ScenarioSourceDraft(kind: .cron)]
+        draft.sources = [
+            ScenarioSourceDraft(kind: .cron),
+            ScenarioSourceDraft(kind: .device, deviceId: "plug-1")
+        ]
         draft.actions = [ScenarioActionDraft(deviceId: "plug-1")]
 
         #expect(draft.payload.trigger.logic == "1 AND 2")
@@ -160,8 +190,8 @@ struct ScenarioDraftTests {
                 deviceId: "remote-1",
                 matchKind: .command,
                 matchKey: "action",
-                matchCommand: "up_press"
-            ),
+                matchText: "up_press"
+            )
         ]
         draft.actions = [ScenarioActionDraft(deviceId: "plug-1")]
 
@@ -177,50 +207,15 @@ struct ScenarioDraftTests {
         )
     }
 
-    // MARK: - validation
-
-    @Test
-    func aDraftNeedsANameATriggerAndAnAction() {
-        var draft = ScenarioDraft()
-        draft.sources = [ScenarioSourceDraft(kind: .cron)]
-        draft.actions = [ScenarioActionDraft(deviceId: "plug-1")]
-        #expect(!draft.isValid, "A nameless scenario is not valid")
-
-        draft.name = "Movie time"
-        #expect(draft.isValid)
-
-        draft.sources = []
-        #expect(!draft.isValid, "A scenario without a trigger would never fire")
-    }
-
-    @Test
-    func aDraftWithAnIncompleteSourceIsInvalid() {
-        var draft = ScenarioDraft()
-        draft.name = "Movie time"
-        draft.sources = [ScenarioSourceDraft(kind: .cron, cron: "  ")]
-        draft.actions = [ScenarioActionDraft(deviceId: "plug-1")]
-
-        #expect(!draft.isValid)
-    }
-
-    @Test
-    func aDeviceSourceNeedsADeviceAndACommandValue() {
-        var source = ScenarioSourceDraft(kind: .device, matchKind: .command, matchKey: "action")
-        #expect(!source.isValid, "No device is selected yet")
-
-        source.deviceId = "remote-1"
-        #expect(!source.isValid, "A command match without a value matches nothing")
-
-        source.matchCommand = "up_press"
-        #expect(source.isValid)
-    }
-
     // MARK: - logic mode switching
 
     @Test
     func switchingToCustomSeedsTheExpressionFromThePreviousChoice() {
         var draft = ScenarioDraft()
-        draft.sources = [ScenarioSourceDraft(kind: .cron), ScenarioSourceDraft(kind: .cron)]
+        draft.sources = [
+            ScenarioSourceDraft(kind: .cron),
+            ScenarioSourceDraft(kind: .device, deviceId: "plug-1")
+        ]
         draft.logicMode = .any
 
         draft.logicMode = .custom

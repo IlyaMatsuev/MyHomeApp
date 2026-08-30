@@ -25,7 +25,8 @@ final class ScenarioFixtureBuilder {
     private let active: Bool
 
     private var description: String?
-    private var group: ScenarioGroup?
+    private var group: String?
+    private var repeatTimes: Int?
     private var sources: [ScenarioTriggerSource] = []
     private var actions: [ScenarioAction] = []
     private var logic: String?
@@ -49,7 +50,12 @@ final class ScenarioFixtureBuilder {
     }
 
     func inGroup(_ group: String) -> Self {
-        self.group = ScenarioGroup(group)
+        self.group = group
+        return self
+    }
+
+    func repeating(_ repeatTimes: Int) -> Self {
+        self.repeatTimes = repeatTimes
         return self
     }
 
@@ -82,6 +88,18 @@ final class ScenarioFixtureBuilder {
         return self
     }
 
+    func withDeviceMeasurement(deviceId: String, key: String = "temperature", value: Int) -> Self {
+        sources.append(
+            .device(
+                ScenarioDeviceTrigger(
+                    externalId: deviceId,
+                    measurements: ScenarioValueMatch(are: [key: AnyCodable(value)])
+                )
+            )
+        )
+        return self
+    }
+
     func withLogic(_ logic: String) -> Self {
         self.logic = logic
         return self
@@ -108,10 +126,15 @@ final class ScenarioFixtureBuilder {
             externalId: externalId,
             name: name,
             description: description,
-            trigger: ScenarioTrigger(sources: sources, logic: logic),
+            // Without an explicit expression the fixture uses the "all must match" form the hub expects.
+            trigger: ScenarioTrigger(
+                sources: sources,
+                logic: logic ?? ScenarioTriggerLogic.all.expression(sourceCount: sources.count)
+            ),
             actions: actions,
             active: active,
             group: group,
+            repeatTimes: repeatTimes,
             createdAt: createdAt,
             updatedAt: updatedAt
         )

@@ -44,7 +44,7 @@ struct ScenarioEditorViewModelTests {
             mode: mode,
             draft: draft,
             devices: devices,
-            knownGroups: [ScenarioGroup("living_room")],
+            knownGroups: ["living_room"],
             service: service
         ) { [recorder] scenario in
             recorder.record(scenario)
@@ -168,7 +168,7 @@ struct ScenarioEditorViewModelTests {
         let payload = try #require(service.createScenarioPayloads.first)
         #expect(payload.name == "Movie time")
         #expect(payload.description == "Dim the lights")
-        #expect(payload.group == ScenarioGroup("living_room"))
+        #expect(payload.group == "living_room")
         #expect(payload.active == true)
         #expect(payload.trigger.logic == "1")
         #expect(payload.actions.count == 1)

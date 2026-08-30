@@ -55,8 +55,8 @@ struct ScenarioTriggerLogicTests {
         #expect(ScenarioTriggerLogic.parse("1 AND 2", sourceCount: 3) == .custom("1 AND 2"))
     }
 
-    @Test(arguments: [nil, "", "   "] as [String?])
-    func parseDefaultsToAllWhenTheHubSendsNothing(expression: String?) {
+    @Test(arguments: ["", "   "])
+    func parseDefaultsToAllWhenTheExpressionIsBlank(expression: String) {
         #expect(ScenarioTriggerLogic.parse(expression, sourceCount: 2) == .all)
     }
 
@@ -81,6 +81,7 @@ struct ScenarioTriggerLogicTests {
     func customIsValidatedAgainstTheSourceCount() {
         #expect(ScenarioTriggerLogic.custom("(1 OR 2) AND 3").isValid(sourceCount: 3))
         #expect(!ScenarioTriggerLogic.custom("(1 OR 2) AND 4").isValid(sourceCount: 3))
+        #expect(!ScenarioTriggerLogic.custom("1 OR 2").isValid(sourceCount: 3), "Leaves source 3 unreferenced")
     }
 
     // MARK: - mode
@@ -91,6 +92,6 @@ struct ScenarioTriggerLogicTests {
         #expect(ScenarioTriggerLogic.any.mode == .any)
         #expect(ScenarioTriggerLogic.custom("1").mode == .custom)
         #expect(ScenarioTriggerLogic.all.customExpression == nil)
-        #expect(ScenarioTriggerLogic.custom("1 AND NOT 2").customExpression == "1 AND NOT 2")
+        #expect(ScenarioTriggerLogic.custom("(1 OR 2) AND 3").customExpression == "(1 OR 2) AND 3")
     }
 }

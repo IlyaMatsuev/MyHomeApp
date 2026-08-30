@@ -24,7 +24,10 @@ struct HubScenarioServiceTests {
         let request = try #require(client.sentRequests.first)
         #expect(request.method == .get)
         #expect(request.path == "/scenarios")
-        #expect(request.query == ["pageSize": "20"])
+        #expect(
+            request.query == ["pageSize": "20", "includeInactive": "true"],
+            "The hub filters inactive scenarios out unless asked for them"
+        )
         #expect(request.protected == true)
         #expect(request.body == nil)
     }
@@ -93,8 +96,7 @@ struct HubScenarioServiceTests {
         #expect(json["name"] as? String == "Warm light on")
         #expect(json["active"] as? Bool == true)
         #expect(json["group"] as? String == "living_room")
-        #expect(json["devices"] != nil, "Actions are sent under the hub's \"devices\" key")
-        #expect(json["actions"] == nil)
+        #expect(json["actions"] != nil)
         #expect(json["externalId"] == nil)
         #expect(json["createdAt"] == nil)
     }
@@ -201,15 +203,15 @@ struct HubScenarioServiceTests {
     private static let payload = ScenarioPayload(
         name: "Warm light on",
         description: nil,
+        group: "living_room",
+        active: true,
         trigger: ScenarioTrigger(
             sources: [.cron(ScenarioCronTrigger(cron: "8 21 * * *", adjustTo: .sunset))],
             logic: "1"
         ),
         actions: [
             ScenarioAction(externalId: "device-1", set: ScenarioActionSet(controls: ["on": AnyCodable(true)]))
-        ],
-        active: true,
-        group: ScenarioGroup("living_room")
+        ]
     )
 
     private static func encode<T: Encodable>(_ value: T) throws -> Data {

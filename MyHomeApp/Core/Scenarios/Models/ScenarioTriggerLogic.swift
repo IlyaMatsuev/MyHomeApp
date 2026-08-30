@@ -1,10 +1,8 @@
-import Foundation
-
 /// How the trigger sources combine.
 ///
 /// The hub stores a positional boolean string (`"(1 OR 2) AND 3"`). Almost every real scenario is
 /// "all of these" or "any of these", so the app models those two explicitly and keeps a `custom`
-/// escape hatch for anything else — see FEATURE_PLAN.md for the API change this stands in for.
+/// escape hatch for anything else.
 enum ScenarioTriggerLogic: Hashable {
     case all
     case any
@@ -48,28 +46,21 @@ extension ScenarioTriggerLogic {
         switch self {
         case .all: return Self.canonicalExpression(joinedBy: "AND", sourceCount: sourceCount)
         case .any: return Self.canonicalExpression(joinedBy: "OR", sourceCount: sourceCount)
-        case .custom(let expression): return expression
+        case .custom(let expression): return expression.trimmed
         }
     }
 
     func isValid(sourceCount: Int) -> Bool {
-        switch self {
-        case .all, .any:
-            return sourceCount > 0
-
-        case .custom(let expression):
-            return ScenarioLogicExpression.isValid(expression, sourceCount: sourceCount)
-        }
+        ScenarioLogicExpression.isValid(expression(sourceCount: sourceCount), sourceCount: sourceCount)
     }
 
     /// Maps a stored expression back onto the editor's three-way choice.
     ///
     /// An expression that is exactly the canonical all-`AND` / all-`OR` form for the current source
     /// count round-trips as `.all` / `.any`; anything else is preserved verbatim as `.custom`.
-    static func parse(_ expression: String?, sourceCount: Int) -> Self {
-        guard let expression, !expression.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return .all
-        }
+    static func parse(_ expression: String, sourceCount: Int) -> Self {
+        guard !expression.isBlank else { return .all }
+
         let normalized = normalize(expression)
         if normalized == normalize(canonicalExpression(joinedBy: "AND", sourceCount: sourceCount)) {
             return .all

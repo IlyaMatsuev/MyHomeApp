@@ -93,6 +93,9 @@ struct ScenarioSourceCard: View {
 
             case .control:
                 controlFields
+
+            case .measurement:
+                measurementFields
             }
         }
     }
@@ -100,28 +103,47 @@ struct ScenarioSourceCard: View {
     private var commandFields: some View {
         VStack(alignment: .leading, spacing: 10) {
             FormTextField(title: "Command name", placeholder: "action", text: $source.matchKey)
-            FormTextField(title: "Command value", placeholder: "up_press", text: $source.matchCommand)
+            FormTextField(title: "Command value", placeholder: "up_press", text: $source.matchText)
         }
     }
 
     private var controlFields: some View {
         VStack(alignment: .leading, spacing: 10) {
-            let keys = viewModel.toggleControlKeys(ofDeviceId: source.deviceId)
-
-            if keys.isEmpty {
-                FormTextField(title: "Control name", placeholder: "on", text: $source.matchKey)
-            } else {
-                Picker("Control", selection: $source.matchKey) {
-                    ForEach(keys, id: \.self) { key in
-                        Text(key).tag(key)
-                    }
-                }
-                .tint(Color("AccentPrimary"))
-            }
+            keyField(
+                title: "Control name",
+                placeholder: "on",
+                keys: viewModel.toggleControlKeys(ofDeviceId: source.deviceId)
+            )
 
             Toggle("Is on", isOn: $source.matchValue)
                 .tint(Color("AccentPrimary"))
                 .foregroundStyle(Color("TextPrimary"))
+        }
+    }
+
+    private var measurementFields: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            keyField(
+                title: "Measurement name",
+                placeholder: "temperature",
+                keys: viewModel.measurementKeys(ofDeviceId: source.deviceId)
+            )
+            FormTextField(title: "Equals", placeholder: "21", text: $source.matchText)
+        }
+    }
+
+    /// A picker over the keys the device reports, or a free text field when the app doesn't know them.
+    @ViewBuilder
+    private func keyField(title: String, placeholder: String, keys: [String]) -> some View {
+        if keys.isEmpty {
+            FormTextField(title: title, placeholder: placeholder, text: $source.matchKey)
+        } else {
+            Picker(title, selection: $source.matchKey) {
+                ForEach(keys, id: \.self) { key in
+                    Text(key).tag(key)
+                }
+            }
+            .tint(Color("AccentPrimary"))
         }
     }
 

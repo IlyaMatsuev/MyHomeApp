@@ -38,7 +38,8 @@ app can express safely today.
 
 ## API contract
 
-The hub JSON (from the issue) is the source of truth:
+The hub is the source of truth: `smarthome/src/scenarios` (controller, DTOs, mongoose schemas and
+validators) plus the Postman collection in `smarthome/api`. A `Scenarios.ScenarioResponse` looks like:
 
 ```json
 {
@@ -55,43 +56,62 @@ The hub JSON (from the issue) is the source of truth:
     ],
     "logic": "(1 OR 2) AND 3"
   },
-  "devices": [ { "externalId": "…", "set": { "controls": { "on": true } } } ],
+  "actions": [ { "externalId": "…", "set": { "controls": { "on": true } } } ],
+  "repeatTimes": 3,
   "createdAt": "2025-08-30T16:04:38.229Z",
   "updatedAt": "2026-08-15T10:52:37.396Z"
 }
 ```
 
-Two shape quirks the decoder must absorb:
+Shape quirks the decoder must absorb:
 
 1. A `cron` source carries its payload **flat** (`cron`, `adjustTo` next to `type`), while a `device` source
    nests it under a `device` key. → custom `Codable` on the source enum.
 2. `group` uses `snake_case` (`living_room`) while `Device.room` uses `kebab-case` (`living-room`). They are
-   *different* vocabularies, and the hub may add groups at any time. → `group` is **not** a closed enum; it is
-   a transparent string wrapper that humanises itself for display. A new hub group can never break decoding
-   of the whole page.
+   *different* vocabularies, and the hub creates a group on demand from whatever a scenario names. → `group`
+   is a plain `String?`; **absent means no group**, and there is no `"none"` group as there is for rooms.
+   `ScenarioGroupName` holds the display wording and the hub's naming rule.
+3. A device trigger source and an action `set` are each keyed by device *config section* — the hub's
+   `commands` / `controls` / `measurements`. All three decode, so editing a scenario created elsewhere
+   cannot silently drop a section.
 
-Endpoints (mirroring `HubDeviceService`, which does partial `PUT`s against `/devices/{id}`):
+Endpoints:
 
 | Operation      | Request                                     |
 | -------------- | ------------------------------------------- |
-| List           | `GET /scenarios?pageSize=20`                |
+| List           | `GET /scenarios?pageSize=20&includeInactive=true` — **the hub filters inactive scenarios out by default**, and the list needs them for their toggle |
 | Create         | `POST /scenarios` with the full payload     |
-| Update         | `PUT /scenarios/{externalId}` with the full payload |
-| Toggle active  | `PUT /scenarios/{externalId}` with `{ "active": Bool }` (partial, same style as `updateControl`) |
+| Update         | `PUT /scenarios/{externalId}`; every field is optional and the hub merges field by field (`dto.x ?? stored.x`) |
+| Toggle active  | `PUT /scenarios/{externalId}` with `{ "active": Bool }` |
 | Delete         | `DELETE /scenarios/{externalId}`            |
+
+Not used by the app today: `GET/POST/DELETE /scenarios/groups[/{name}]` (a group resource carrying a
+`scenariosCount`) and the `group` / `room` list filters. The screen derives its group chips from the
+loaded scenarios instead, so a chip can never select an empty list.
+
+Two consequences of the merge semantics worth knowing: a `nil` in `ScenarioPayload` is omitted rather
+than sent as `null`, so **the editor cannot clear a description or a group** once set — only the hub can;
+and `repeatTimes` is read-only here, preserved by being left out of every update.
+
+### Validation the client mirrors
+
+`ScenarioLimits` and `ScenarioGroupName` copy the hub's constraints so a save that the hub will reject is
+blocked in the form instead: name 3–80, description 10–255 (or absent), group 3–40 matching
+`[A-Za-z0-9_]+` and never digits only, `logic` 1–80, and **at most one `cron` source per scenario**.
 
 ## New Files
 
 **Core**
 
-- `Core/Scenarios/Models/Scenario.swift` — the API entity (`devices` is decoded into `actions` for clarity).
+- `Core/Scenarios/Models/Scenario.swift` — the API entity.
 - `Core/Scenarios/Models/ScenarioAction.swift` — `ScenarioAction` + `ScenarioActionSet`.
 - `Core/Scenarios/Models/ScenarioTrigger.swift` — `sources` + raw `logic` string.
 - `Core/Scenarios/Models/ScenarioTriggerSource.swift` — the source enum with custom `Codable`, plus
   `ScenarioCronTrigger`, `ScenarioDeviceTrigger`, `ScenarioValueMatch`.
 - `Core/Scenarios/Models/ScenarioSolarAdjustment.swift` — `sunrise` / `sunset`.
-- `Core/Scenarios/Models/ScenarioGroup.swift` — transparent string wrapper + display label + ordering.
-- `Core/Scenarios/Models/ScenarioGroupFilter.swift` — `all` / `specific`, mirroring `DeviceRoomFilter`.
+- `Core/Scenarios/Models/ScenarioGroupName.swift` — display wording for a `group` + the hub's naming rule.
+- `Core/Scenarios/Models/ScenarioGroupFilter.swift` — `all` / `ungrouped` / `named`.
+- `Core/Scenarios/Models/ScenarioLimits.swift` — the hub's field constraints, mirrored.
 - `Core/Scenarios/Models/ScenarioTriggerLogic.swift` — `all` / `any` / `custom(String)` + string bridging.
 - `Core/Scenarios/Models/ScenarioLogicExpression.swift` — validator for custom expressions.
 - `Core/Scenarios/Models/ScenarioPayload.swift` — the writable subset sent to the hub.
@@ -102,7 +122,7 @@ Endpoints (mirroring `HubDeviceService`, which does partial `PUT`s against `/dev
 **Screens**
 
 - `Screens/Scenarios/ScenariosViewModel.swift` — list state, filtering, active toggle, deletion, editor presentation.
-- `Screens/Scenarios/ScenarioList.swift`, `ScenarioListRow.swift`, `ScenarioGroupFilterList.swift`.
+- `Screens/Scenarios/ScenarioList.swift`, `ScenarioListRow.swift`.
 - `Screens/Scenarios/ScenarioEditorViewModel.swift` — one editor session (create or edit).
 - `Screens/Scenarios/ScenarioEditorSheet.swift` — the form.
 - `Screens/Scenarios/ScenarioSourceCard.swift`, `ScenarioActionCard.swift` — a trigger source / an action, edited
@@ -125,9 +145,10 @@ struct Scenario: Codable, Identifiable, Hashable {
     let name: String
     let description: String?
     let trigger: ScenarioTrigger
-    let actions: [ScenarioAction]   // "devices" on the wire
-    let active: Bool
-    let group: ScenarioGroup?
+    let actions: [ScenarioAction]
+    var active: Bool
+    let group: String?              // nil == no group
+    let repeatTimes: Int?           // read-only here; the hub counts it down
     let createdAt: Date
     let updatedAt: Date
 
@@ -141,7 +162,7 @@ enum ScenarioTriggerSource: Codable, Hashable {
 
 protocol ScenarioService: Sendable {
     func fetchScenarios() async throws -> Page<Scenario>
-    func createScenario(_ payload: ScenarioPayload) async throws -> Scenario
+    func createScenario(payload: ScenarioPayload) async throws -> Scenario
     func updateScenario(scenarioId: String, payload: ScenarioPayload) async throws -> Scenario
     func setActive(scenarioId: String, active: Bool) async throws -> Scenario
     func deleteScenario(scenarioId: String) async throws
@@ -153,7 +174,7 @@ final class ScenariosViewModel {
 
     var selectedGroup: ScenarioGroupFilter
     private(set) var state: LoadState
-    private(set) var groupSections: [ScenarioGroupSection]
+    var groupSections: [ScenarioGroupSection]   // keyed by the optional group
     private(set) var devices: [Device]          // for editor pickers; best-effort
     var editor: ScenarioEditorViewModel?        // drives .sheet(item:)
     var scenarioPendingDeletion: Scenario?      // drives .confirmationDialog
@@ -206,6 +227,10 @@ Why it is better:
 
 ### What this app ships now (against today's string API)
 
+The hub's own grammar is narrower than it looks: `validateTriggerLogic` accepts digits joined by `AND`
+and `OR` with decorative parentheses, has **no `NOT`**, and requires the operands to reference every
+source exactly once. `ScenarioLogicExpression` implements exactly that rule and nothing more.
+
 Almost every real scenario is "all of these" or "any of these". So the editor offers a three-way choice:
 
 | Choice                  | Serialised `logic`      |
@@ -217,9 +242,9 @@ Almost every real scenario is "all of these" or "any of these". So the editor of
 On load the string is parsed back: if it is exactly the canonical all-`AND` / all-`OR` form for the current
 source count it is shown as *All* / *Any*, otherwise as *Custom* with the original text preserved. Custom
 input is validated client-side by a small recursive-descent parser (`ScenarioLogicExpression`) over the
-grammar `expr := term (OR term)* | term := factor (AND factor)* | factor := NOT factor | "(" expr ")" | INDEX`,
-which also rejects indexes outside `1...sources.count`. Saving is blocked while the expression is invalid,
-so the positional footgun can no longer produce a scenario the hub will reject.
+input is validated client-side against the hub's rule, which also rejects indexes outside
+`1...sources.count`. Saving is blocked while the expression is invalid, so the positional footgun can no
+longer produce a scenario the hub will reject.
 
 ## Navigation / UX
 
@@ -238,9 +263,10 @@ TabView
   name, description, group, active, *When* (trigger sources + match mode), *Then* (device actions).
 - **Trigger sources** are numbered cards edited inline. Adding uses a menu ("On a schedule" / "When a device…");
   the card's number is the index a custom logic expression refers to.
-- **Device sources** pick a device from the loaded device list, then match either a *command*
-  (free text, e.g. `up_press` — commands are not discoverable from `Device`) or a *control*
-  (picker over the device's known boolean control keys + a toggle).
+- **Device sources** pick a device from the loaded device list, then match one of the hub's three
+  condition sections: a *command* (free text, e.g. `up_press` — commands are not discoverable from
+  `Device`), a *control* (picker over the device's boolean control keys + a toggle) or a *measurement*
+  (picker over the device's measurement keys + the value to equal).
 - **Actions** are edited inline: device picker + control key picker + on/off toggle. This matches the only
   control shape the app models today (`DeviceControlType.toggle`).
 - The logic picker appears once there is more than one source — **or** whenever the mode is `Custom`, so that
@@ -262,7 +288,7 @@ TabView
 3. [x] **Service layer** (Size: S) — protocol, hub implementation, mock, environment key. Depends on 1.
 4. [x] **Shared chip bar** (Size: S) — `FilterChipsBar`; re-point `DeviceRoomFilterList` at it.
 5. [x] **List screen** (Size: M) — `ScenariosViewModel`, `ScenariosView`, `ScenarioList`, `ScenarioListRow`,
-      `ScenarioGroupFilterList`. Depends on 3, 4.
+      and the group chip bar. Depends on 3, 4.
 6. [x] **Draft models** (Size: M) — `ScenarioDraft` + bridging to/from `Scenario` / `ScenarioPayload`. Depends on 1, 2.
 7. [x] **Editor** (Size: L) — `ScenarioEditorViewModel`, `ScenarioEditorSheet`, `ScenarioSourceCard`,
       `ScenarioActionCard`. Depends on 5, 6.
@@ -275,13 +301,13 @@ Unit tests (Swift Testing, `UnitTests` plan):
 
 - `ScenarioCodableTests` — decodes the issue's JSON **verbatim**; round-trips; tolerates a missing
   `group` / `description` / `logic` and an unknown group value.
-- `ScenarioGroupTests` — label humanisation (`living_room` → `Living Room`), `General` fallback, ordering.
+- `ScenarioGroupNameTests` — label humanisation (`living_room` → `Living Room`), the `Ungrouped` fallback, the hub's name rule.
 - `ScenarioTriggerLogicTests` — canonical `AND`/`OR` generation, parse-back, custom preservation.
-- `ScenarioLogicExpressionTests` — valid/invalid expressions, out-of-range indexes, unbalanced parens.
-- `HubScenarioServiceTests` — request shape (method, path, protected, body) and error propagation for all five operations.
+- `ScenarioLogicExpressionTests` — the hub's grammar exactly: no `NOT`, every source referenced once, out-of-range indexes.
+- `HubScenarioServiceTests` — request shape (method, path, query incl. `includeInactive`, body) and error propagation for all five operations.
 - `ScenariosViewModelTests` — load/group/sort/filter, active toggle incl. rollback on failure, deletion, editor presentation.
 - `ScenarioEditorViewModelTests` — validation gating, create vs update call, payload contents, failure handling.
-- `ScenarioDraftTests` — `Scenario` → draft → payload fidelity, including the issue's example scenario.
+- `ScenarioDraftTests` / `ScenarioDraftValidationTests` — `Scenario` → draft → payload fidelity, and the mirrored hub limits.
 
 New mocks: `MyHomeAppTests/Mocks/Scenario+Fixture.swift` (fluent builder, like `Device+Fixture`) and
 `MyHomeAppTests/Mocks/StubScenarioService.swift`.
@@ -297,8 +323,8 @@ No UI tests — the existing suite has none for Devices either.
 
 | Risk                                                                 | Mitigation                                                                                          |
 | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Scenario endpoints are inferred from the device endpoints             | All HTTP shapes live in one small `HubScenarioService` and are pinned by tests — one file to correct |
-| Unknown `group` values from the hub break the list                    | `group` is a transparent string wrapper, not an enum; unknown values render humanised                |
+| ~~Scenario endpoints are inferred from the device endpoints~~          | Resolved: every shape here is checked against the hub source and pinned by tests |
+| Unknown `group` values from the hub break the list                    | `group` is a plain `String?`, not an enum; unknown values render humanised                           |
 | Hub adds a third trigger source `type`                                | Decoding a scenario with an unknown source type fails loudly rather than silently dropping the source; the enum is the single place to extend |
 | Positional `logic` breaks when sources are reordered                  | Editor writes canonical expressions for All/Any and validates custom ones against the source count   |
 | Editor cannot express every possible stored trigger                   | Non-expressible scenarios stay listable/toggleable/deletable; `Custom` logic text is preserved verbatim |

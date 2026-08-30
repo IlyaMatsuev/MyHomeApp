@@ -3,11 +3,25 @@ import Observation
 import os
 
 struct ScenarioGroupSection: Identifiable, Hashable {
-    let group: ScenarioGroup
+    /// `nil` for the scenarios the hub returned without a group.
+    let group: String?
     let scenarios: [Scenario]
 
-    var id: String { group.rawValue }
-    var title: String { group.label }
+    var id: String { group ?? "" }
+    var title: String { ScenarioGroupName.label(for: group) }
+}
+
+extension ScenarioGroupSection: Comparable {
+    static func < (lhs: Self, rhs: Self) -> Bool {
+        // Ungrouped scenarios sit at the top, the named groups follow alphabetically.
+        switch (lhs.group, rhs.group) {
+        case (nil, nil): return false
+        case (nil, _): return true
+        case (_, nil): return false
+        case (let lhsGroup?, let rhsGroup?):
+            return lhsGroup.localizedCaseInsensitiveCompare(rhsGroup) == .orderedAscending
+        }
+    }
 }
 
 @Observable
@@ -39,21 +53,24 @@ final class ScenariosViewModel {
     private let toastStore: ToastStore
 
     var groupSections: [ScenarioGroupSection] {
-        Dictionary(grouping: scenarios, by: { $0.displayGroup })
+        Dictionary(grouping: scenarios, by: \.group)
             .map { ScenarioGroupSection(group: $0, scenarios: $1.sorted()) }
-            .sorted(using: KeyPathComparator(\.group))
+            .sorted()
     }
 
-    var availableGroups: [ScenarioGroup] { groupSections.map(\.group) }
+    /// Chips for the filter bar — the groups actually present in the loaded scenarios.
+    var groupFilters: [ScenarioGroupFilter] {
+        [.all] + groupSections.map { ScenarioGroupFilter(group: $0.group) }
+    }
+
+    /// Group names to suggest in the editor. The hub creates a group implicitly, so this is
+    /// a convenience rather than a closed list.
+    var knownGroups: [String] {
+        groupSections.compactMap(\.group)
+    }
 
     var visibleSections: [ScenarioGroupSection] {
-        switch selectedGroup {
-        case .all:
-            groupSections
-
-        case .specific(let group):
-            groupSections.filter { $0.group == group }
-        }
+        groupSections.filter { selectedGroup.matches(group: $0.group) }
     }
 
     init(
@@ -82,7 +99,7 @@ final class ScenariosViewModel {
             state = .loaded
         } catch {
             scenarios = []
-            state = .failed(error.localizedDescription)
+            state = .failed(ScenarioErrorMessage.text(for: error))
             toastStore.error(ScenarioErrorMessage.text(for: error))
         }
 
@@ -170,7 +187,7 @@ final class ScenariosViewModel {
             mode: mode,
             draft: draft,
             devices: devices,
-            knownGroups: availableGroups,
+            knownGroups: knownGroups,
             service: service
         ) { [weak self] saved in
             self?.merge(saved)

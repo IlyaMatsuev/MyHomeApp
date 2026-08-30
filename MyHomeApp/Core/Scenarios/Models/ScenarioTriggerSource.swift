@@ -1,4 +1,3 @@
-import Foundation
 import AnyCodable
 
 /// One entry of `trigger.sources`.
@@ -84,19 +83,27 @@ struct ScenarioCronTrigger: Hashable, Sendable {
     }
 }
 
+/// A device the scenario watches. The hub requires at least one of the three sections to be non-empty.
 struct ScenarioDeviceTrigger: Codable, Hashable {
     let externalId: String
     let commands: ScenarioValueMatch?
     let controls: ScenarioValueMatch?
+    let measurements: ScenarioValueMatch?
 
-    init(externalId: String, commands: ScenarioValueMatch? = nil, controls: ScenarioValueMatch? = nil) {
+    init(
+        externalId: String,
+        commands: ScenarioValueMatch? = nil,
+        controls: ScenarioValueMatch? = nil,
+        measurements: ScenarioValueMatch? = nil
+    ) {
         self.externalId = externalId
         self.commands = commands
         self.controls = controls
+        self.measurements = measurements
     }
 }
 
-/// The `{ "are": { … } }` matcher the hub uses for both commands and controls.
+/// The `{ "are": { … } }` matcher the hub uses for every device condition section.
 struct ScenarioValueMatch: Codable, Hashable {
     private enum CodingKeys: String, CodingKey {
         case are
