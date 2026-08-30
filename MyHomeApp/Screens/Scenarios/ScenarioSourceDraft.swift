@@ -163,7 +163,7 @@ struct ScenarioSourceDraft: Identifiable, Hashable {
         match?.are.sorted { $0.key < $1.key }.first
     }
 
-    private static func text(of value: AnyCodable) -> String {
+    static func text(of value: AnyCodable) -> String {
         switch value.value {
         case let string as String: return string
         case let integer as Int: return "\(integer)"

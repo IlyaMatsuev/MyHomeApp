@@ -27,6 +27,7 @@ final class ScenarioEditorViewModel: Identifiable {
     let mode: Mode
     let devices: [Device]
     let knownGroups: [String]
+    let knownCommands: [ScenarioKnownCommand]
 
     var draft: ScenarioDraft
 
@@ -60,6 +61,7 @@ final class ScenarioEditorViewModel: Identifiable {
         draft: ScenarioDraft,
         devices: [Device],
         knownGroups: [String],
+        knownCommands: [ScenarioKnownCommand] = [],
         service: ScenarioService,
         onSaved: @escaping @MainActor (Scenario) -> Void
     ) {
@@ -67,6 +69,7 @@ final class ScenarioEditorViewModel: Identifiable {
         self.draft = draft
         self.devices = devices
         self.knownGroups = knownGroups
+        self.knownCommands = knownCommands
         self.service = service
         self.onSaved = onSaved
     }
@@ -91,14 +94,17 @@ final class ScenarioEditorViewModel: Identifiable {
         return measurements.keys.sorted()
     }
 
+    func knownCommand(ofDeviceId deviceId: String) -> ScenarioKnownCommand? {
+        knownCommands.first { $0.deviceId == deviceId }
+    }
+
     // MARK: - Trigger sources
 
     func addSource(kind: ScenarioTriggerSource.Kind) {
         var source = ScenarioSourceDraft(kind: kind)
         if kind == .device, let device = devices.first {
             source.deviceId = device.externalId
-            source.matchKey = toggleControlKeys(ofDeviceId: device.externalId).first
-                ?? ScenarioSourceDraft.defaultControlKey
+            applyMatchDefaults(to: &source)
         }
         draft.sources.append(source)
     }
@@ -110,24 +116,50 @@ final class ScenarioEditorViewModel: Identifiable {
     func selectDevice(_ deviceId: String, forSource source: ScenarioSourceDraft) {
         guard let index = draft.sources.firstIndex(where: { $0.id == source.id }) else { return }
         draft.sources[index].deviceId = deviceId
-        // A command name is free text the user typed; control and measurement keys belong to the device.
-        guard draft.sources[index].matchKind != .command else { return }
-        draft.sources[index].matchKey = defaultMatchKey(for: draft.sources[index].matchKind, deviceId: deviceId)
+        applyMatchDefaults(to: &draft.sources[index])
     }
 
     func selectMatchKind(_ matchKind: ScenarioSourceDraft.MatchKind, forSource source: ScenarioSourceDraft) {
         guard let index = draft.sources.firstIndex(where: { $0.id == source.id }) else { return }
         draft.sources[index].matchKind = matchKind
-        draft.sources[index].matchKey = defaultMatchKey(for: matchKind, deviceId: draft.sources[index].deviceId)
+        applyMatchDefaults(to: &draft.sources[index])
     }
 
-    /// The key to preselect when the device or the matched section changes. Empty when the app knows
-    /// no keys for that section and the user has to type one.
-    private func defaultMatchKey(for matchKind: ScenarioSourceDraft.MatchKind, deviceId: String) -> String {
-        switch matchKind {
-        case .command: return ScenarioSourceDraft.defaultCommandKey
-        case .control: return toggleControlKeys(ofDeviceId: deviceId).first ?? ScenarioSourceDraft.defaultControlKey
-        case .measurement: return measurementKeys(ofDeviceId: deviceId).first ?? ""
+    func selectMatchKey(_ matchKey: String, forSource source: ScenarioSourceDraft) {
+        guard let index = draft.sources.firstIndex(where: { $0.id == source.id }) else { return }
+        draft.sources[index].matchKey = matchKey
+        applyMatchValue(to: &draft.sources[index])
+    }
+
+    /// Preselects the key of the matched section, then the value the device currently reports for it,
+    /// so a new condition starts from something real instead of an empty field.
+    private func applyMatchDefaults(to source: inout ScenarioSourceDraft) {
+        switch source.matchKind {
+        case .command:
+            source.matchKey = knownCommand(ofDeviceId: source.deviceId)?.name ?? ScenarioSourceDraft.defaultCommandKey
+
+        case .control:
+            source.matchKey = toggleControlKeys(ofDeviceId: source.deviceId).first
+                ?? ScenarioSourceDraft.defaultControlKey
+
+        case .measurement:
+            source.matchKey = measurementKeys(ofDeviceId: source.deviceId).first ?? ""
+        }
+        applyMatchValue(to: &source)
+    }
+
+    private func applyMatchValue(to source: inout ScenarioSourceDraft) {
+        let device = device(withId: source.deviceId)
+        switch source.matchKind {
+        case .command:
+            source.matchText = knownCommand(ofDeviceId: source.deviceId)?.value ?? ""
+
+        case .control:
+            source.matchValue = device?.controls?[source.matchKey]?.value as? Bool ?? true
+
+        case .measurement:
+            source.matchText = device?.measurements?[source.matchKey]
+                .map(ScenarioSourceDraft.text(of:)) ?? ""
         }
     }
 

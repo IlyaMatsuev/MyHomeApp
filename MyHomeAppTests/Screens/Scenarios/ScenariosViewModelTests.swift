@@ -221,6 +221,25 @@ struct ScenariosViewModelTests {
     }
 
     @Test
+    func startCreatingOffersTheCommandMatchesOtherScenariosUse() async throws {
+        service.setScenarios([
+            Scenario.fixture(name: "Warm light on")
+                .withDeviceCommand(deviceId: "device-1", value: "up_press")
+                .build()
+        ])
+        await viewModel.load()
+
+        viewModel.startCreating()
+
+        let editor = try #require(viewModel.editor)
+        #expect(
+            editor.knownCommands == [
+                ScenarioKnownCommand(deviceId: "device-1", name: "action", value: "up_press")
+            ]
+        )
+    }
+
+    @Test
     func startEditingSeedsTheEditorFromTheScenario() async throws {
         let scenario = Scenario.fixture(name: "Movie time")
             .inGroup("living_room")

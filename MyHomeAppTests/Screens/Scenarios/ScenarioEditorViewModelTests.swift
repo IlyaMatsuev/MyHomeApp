@@ -10,6 +10,10 @@ private enum Fixtures {
         .build()
 
     static let speaker = Device.fixture(name: "Speaker").build()
+
+    static let thermostat = Device.fixture(name: "Thermostat")
+        .withMeasurements(["temperature": AnyCodable(21), "humidity": AnyCodable(40)])
+        .build()
 }
 
 @MainActor
@@ -38,13 +42,15 @@ struct ScenarioEditorViewModelTests {
     private func makeViewModel(
         mode: ScenarioEditorViewModel.Mode = .create,
         draft: ScenarioDraft = ScenarioDraft(),
-        devices: [Device] = [Fixtures.lamp, Fixtures.speaker]
+        devices: [Device] = [Fixtures.lamp, Fixtures.speaker],
+        knownCommands: [ScenarioKnownCommand] = []
     ) -> ScenarioEditorViewModel {
         ScenarioEditorViewModel(
             mode: mode,
             draft: draft,
             devices: devices,
             knownGroups: ["living_room"],
+            knownCommands: knownCommands,
             service: service
         ) { [recorder] scenario in
             recorder.record(scenario)
@@ -297,6 +303,73 @@ struct ScenarioEditorViewModelTests {
         let asControl = try #require(viewModel.draft.sources.first)
         #expect(asControl.matchKind == .control)
         #expect(asControl.matchKey == "on")
+    }
+
+    // MARK: - trigger source values
+
+    @Test
+    func addSourceStartsFromTheControlValueTheDeviceReports() throws {
+        let viewModel = makeViewModel()
+
+        viewModel.addSource(kind: .device)
+
+        let source = try #require(viewModel.draft.sources.first)
+        #expect(source.matchValue == false, "The lamp reports \"on\": false")
+    }
+
+    @Test
+    func selectMatchKindStartsFromTheMeasurementValueTheDeviceReports() throws {
+        let viewModel = makeViewModel(devices: [Fixtures.thermostat])
+        viewModel.addSource(kind: .device)
+        let source = try #require(viewModel.draft.sources.first)
+
+        viewModel.selectMatchKind(.measurement, forSource: source)
+
+        let updated = try #require(viewModel.draft.sources.first)
+        #expect(updated.matchKey == "humidity")
+        #expect(updated.matchText == "40")
+    }
+
+    @Test
+    func selectMatchKeyRefreshesTheValueOfTheNewKey() throws {
+        let viewModel = makeViewModel(devices: [Fixtures.thermostat])
+        viewModel.addSource(kind: .device)
+        let source = try #require(viewModel.draft.sources.first)
+        viewModel.selectMatchKind(.measurement, forSource: source)
+        let measurement = try #require(viewModel.draft.sources.first)
+
+        viewModel.selectMatchKey("temperature", forSource: measurement)
+
+        let updated = try #require(viewModel.draft.sources.first)
+        #expect(updated.matchKey == "temperature")
+        #expect(updated.matchText == "21")
+    }
+
+    @Test
+    func selectMatchKindStartsFromACommandAnotherScenarioAlreadyUses() throws {
+        let known = ScenarioKnownCommand(deviceId: Fixtures.lamp.externalId, name: "action", value: "up_press")
+        let viewModel = makeViewModel(knownCommands: [known])
+        viewModel.addSource(kind: .device)
+        let source = try #require(viewModel.draft.sources.first)
+
+        viewModel.selectMatchKind(.command, forSource: source)
+
+        let updated = try #require(viewModel.draft.sources.first)
+        #expect(updated.matchKey == "action")
+        #expect(updated.matchText == "up_press")
+        #expect(updated.isValid)
+    }
+
+    @Test
+    func selectMatchKindLeavesTheCommandValueEmptyWhenNoneIsKnown() throws {
+        let viewModel = makeViewModel()
+        viewModel.addSource(kind: .device)
+        let source = try #require(viewModel.draft.sources.first)
+
+        viewModel.selectMatchKind(.command, forSource: source)
+
+        let updated = try #require(viewModel.draft.sources.first)
+        #expect(updated.matchText.isEmpty)
     }
 
     // MARK: - action editing

@@ -140,7 +140,7 @@ struct ScenarioSourceCard: View {
         if keys.isEmpty {
             FormTextField(title: title, placeholder: placeholder, text: $source.matchKey)
         } else {
-            Picker(title, selection: $source.matchKey) {
+            Picker(title, selection: matchKeyBinding) {
                 ForEach(keys, id: \.self) { key in
                     Text(key).tag(key)
                 }
@@ -153,6 +153,13 @@ struct ScenarioSourceCard: View {
         Binding(
             get: { source.matchKind },
             set: { viewModel.selectMatchKind($0, forSource: source) }
+        )
+    }
+
+    private var matchKeyBinding: Binding<String> {
+        Binding(
+            get: { source.matchKey },
+            set: { viewModel.selectMatchKey($0, forSource: source) }
         )
     }
 }

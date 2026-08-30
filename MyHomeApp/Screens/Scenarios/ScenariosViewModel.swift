@@ -69,6 +69,23 @@ final class ScenariosViewModel {
         groupSections.compactMap(\.group)
     }
 
+    /// Command matches already in use, so a new device trigger can offer a value the hub has seen.
+    var knownCommands: [ScenarioKnownCommand] {
+        scenarios
+            .flatMap(\.trigger.sources)
+            .compactMap { source -> ScenarioKnownCommand? in
+                guard case .device(let trigger) = source,
+                      let command = trigger.commands?.are.sorted(by: { $0.key < $1.key }).first else {
+                    return nil
+                }
+                return ScenarioKnownCommand(
+                    deviceId: trigger.externalId,
+                    name: command.key,
+                    value: ScenarioSourceDraft.text(of: command.value)
+                )
+            }
+    }
+
     var visibleSections: [ScenarioGroupSection] {
         groupSections.filter { selectedGroup.matches(group: $0.group) }
     }
@@ -188,6 +205,7 @@ final class ScenariosViewModel {
             draft: draft,
             devices: devices,
             knownGroups: knownGroups,
+            knownCommands: knownCommands,
             service: service
         ) { [weak self] saved in
             self?.merge(saved)
