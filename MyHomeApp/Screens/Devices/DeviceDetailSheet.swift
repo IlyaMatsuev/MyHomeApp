@@ -105,5 +105,5 @@ struct DeviceDetailSheet: View {
             onDeleted: { _ in }
         )
     )
-    .environment(FavoriteColorsStore(persistence: InMemoryFavoriteColorsPersistence()))
+    .environment(SavedColorsStore(persistence: InMemorySavedColorsPersistence()))
 }

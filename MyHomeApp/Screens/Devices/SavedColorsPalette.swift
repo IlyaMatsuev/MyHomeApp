@@ -4,14 +4,14 @@ import SwiftUI
 ///
 /// The circles wrap rather than scroll: a horizontal scroller inside a scrolling sheet clips its
 /// last circle mid-shape and fights the sheet for the drag.
-struct FavoriteColorsPalette: View {
-    @Environment(FavoriteColorsStore.self) private var store
+struct SavedColorsPalette: View {
+    @Environment(SavedColorsStore.self) private var store
 
     /// The colour currently in the field: offered for saving, and ringed once it is saved.
     let currentHex: String
     let onSelect: (String) -> Void
 
-    @State private var editedColor: FavoriteColor?
+    @State private var editedColor: SavedColor?
 
     private static let diameter: CGFloat = 32
 
@@ -26,7 +26,7 @@ struct FavoriteColorsPalette: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Favourites")
+            Text("Saved")
                 .font(.caption2)
                 .foregroundStyle(Color("TextSecondary"))
 
@@ -47,7 +47,7 @@ struct FavoriteColorsPalette: View {
             }
         }
         .sheet(item: $editedColor) { color in
-            FavoriteColorEditorSheet(color: color) { store.update(color, to: $0) }
+            SavedColorEditorSheet(color: color) { store.update(color, to: $0) }
         }
     }
 
@@ -62,10 +62,10 @@ struct FavoriteColorsPalette: View {
                 .background(Color("BackgroundTertiary"), in: Circle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Save \(hex) to favourites")
+        .accessibilityLabel("Save \(hex)")
     }
 
-    private func circle(_ color: FavoriteColor) -> some View {
+    private func circle(_ color: SavedColor) -> some View {
         let isSelected = color.hex == normalizedCurrent
 
         return Button {
@@ -85,7 +85,7 @@ struct FavoriteColorsPalette: View {
         }
         .buttonStyle(.plain)
         .contentShape(.contextMenuPreview, Circle())
-        .accessibilityLabel("Favourite color \(color.hex)")
+        .accessibilityLabel("Saved color \(color.hex)")
         .contextMenu {
             Button {
                 editedColor = color
@@ -103,13 +103,13 @@ struct FavoriteColorsPalette: View {
 }
 
 #Preview {
-    FavoriteColorsPalette(currentHex: "#B7D4FF") { _ in }
+    SavedColorsPalette(currentHex: "#B7D4FF") { _ in }
         .padding()
         .background(Color("BackgroundSecondary"))
-        .environment(FavoriteColorsStore(
-            persistence: InMemoryFavoriteColorsPersistence(
+        .environment(SavedColorsStore(
+            persistence: InMemorySavedColorsPersistence(
                 initial: ["#FF7A45", "#4ADE80", "#B7D4FF", "#F43F5E", "#FACC15",
-                          "#8B5CF6", "#06B6D4", "#111827", "#EC4899"].map { FavoriteColor(hex: $0) }
+                          "#8B5CF6", "#06B6D4", "#111827", "#EC4899"].map { SavedColor(hex: $0) }
             )
         ))
 }

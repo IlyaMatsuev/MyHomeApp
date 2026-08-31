@@ -10,7 +10,7 @@ extension String {
 
     /// The same colour written as `#RRGGBB…` in upper case, or `nil` when this isn't a hex colour.
     ///
-    /// Saved favourites go through this so two spellings of one colour can't both be stored.
+    /// Saved colors go through this so two spellings of one colour can't both be stored.
     var normalizedHexColor: String? {
         let trimmed = trimmed
         guard trimmed.isHexColor else { return nil }

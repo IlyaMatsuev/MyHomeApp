@@ -68,6 +68,6 @@ struct DevicesView: View {
     let store = ServerConfigStore(persistence: InMemoryServerConfigPersistence(initial: [server]))
     return DevicesView(service: MockDeviceService(), toastStore: ToastStore())
         .environment(store)
-        .environment(FavoriteColorsStore(persistence: InMemoryFavoriteColorsPersistence()))
+        .environment(SavedColorsStore(persistence: InMemorySavedColorsPersistence()))
         .task { await store.load() }
 }

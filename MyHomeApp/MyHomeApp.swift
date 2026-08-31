@@ -5,7 +5,7 @@ struct MyHomeApp: App {
     private let toastStore: ToastStore
     private let serverConfigStore: ServerConfigStore
     private let sessionStore: SessionStore
-    private let favoriteColorsStore: FavoriteColorsStore
+    private let savedColorsStore: SavedColorsStore
     private let registrationStore: RegistrationStore
     private let serverConfigService: any ServerConfigService
     private let deviceService: any DeviceService
@@ -23,7 +23,7 @@ struct MyHomeApp: App {
         apiClient.setRefreshHandler { await sessionStore.refresh() }
 
         self.toastStore = ToastStore()
-        self.favoriteColorsStore = FavoriteColorsStore(persistence: UserDefaultsFavoriteColorsPersistence())
+        self.savedColorsStore = SavedColorsStore(persistence: UserDefaultsSavedColorsPersistence())
         self.serverConfigStore = serverConfigStore
         self.sessionStore = sessionStore
         self.registrationStore = RegistrationStore(
@@ -40,7 +40,7 @@ struct MyHomeApp: App {
             RootView()
                 .toastOverlay()
                 .environment(sessionStore)
-                .environment(favoriteColorsStore)
+                .environment(savedColorsStore)
                 .environment(serverConfigStore)
                 .environment(registrationStore)
                 .environment(\.serverConfigService, serverConfigService)

@@ -3,22 +3,22 @@ import Testing
 @testable import MyHomeApp
 
 @MainActor
-struct FavoriteColorsStoreTests {
-    private let persistence = InMemoryFavoriteColorsPersistence()
-    private let store: FavoriteColorsStore
+struct SavedColorsStoreTests {
+    private let persistence = InMemorySavedColorsPersistence()
+    private let store: SavedColorsStore
 
     init() {
-        store = FavoriteColorsStore(persistence: persistence)
+        store = SavedColorsStore(persistence: persistence)
     }
 
     // MARK: - Loading
 
     @Test
     func startsFromWhateverWasPersisted() throws {
-        let saved = [FavoriteColor(hex: "#FF7A45"), FavoriteColor(hex: "#4ADE80")]
-        let persistence = InMemoryFavoriteColorsPersistence(initial: saved)
+        let saved = [SavedColor(hex: "#FF7A45"), SavedColor(hex: "#4ADE80")]
+        let persistence = InMemorySavedColorsPersistence(initial: saved)
 
-        let store = FavoriteColorsStore(persistence: persistence)
+        let store = SavedColorsStore(persistence: persistence)
 
         #expect(store.colors == saved)
     }
@@ -88,7 +88,7 @@ struct FavoriteColorsStoreTests {
         #expect(store.colors.map(\.hex) == ["#FF7A45"])
     }
 
-    /// Editing one favourite onto another would leave two identical circles, so the edited one goes.
+    /// Editing one saved color onto another would leave two identical circles, so the edited one goes.
     @Test
     func editingAColourOntoOneAlreadySavedDropsTheDuplicate() throws {
         store.add("#FF7A45")
@@ -102,7 +102,7 @@ struct FavoriteColorsStoreTests {
 
     @Test
     func ignoresAnEditToAColourThatIsNoLongerSaved() {
-        let stale = FavoriteColor(hex: "#FF7A45")
+        let stale = SavedColor(hex: "#FF7A45")
         store.add("#4ADE80")
 
         store.update(stale, to: "#000000")

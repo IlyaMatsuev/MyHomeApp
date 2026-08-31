@@ -36,7 +36,7 @@ struct DeviceConfigItemEditor: View {
             }
 
             if isColor {
-                FavoriteColorsPalette(currentHex: text) { apply($0) }
+                SavedColorsPalette(currentHex: text) { apply($0) }
                     .disabled(isDisabled || isBusy)
             }
 
@@ -264,7 +264,7 @@ struct DeviceConfigItemEditor: View {
         } ?? ""
     }
 
-    /// A favourite is a shortcut, so picking one also sends it wherever the editor commits on change.
+    /// A saved color is a shortcut, so picking one also sends it wherever the editor commits on change.
     private func apply(_ hex: String) {
         text = hex
         value = AnyCodable(hex)

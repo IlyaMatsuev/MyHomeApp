@@ -1,15 +1,15 @@
 import SwiftUI
 
-/// Changes the color a favourite stands for, reached by long pressing it.
-struct FavoriteColorEditorSheet: View {
-    let color: FavoriteColor
+/// Changes the color a saved swatch stands for, reached by long pressing it.
+struct SavedColorEditorSheet: View {
+    let color: SavedColor
     let onSave: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
 
     @State private var hex: String
 
-    init(color: FavoriteColor, onSave: @escaping (String) -> Void) {
+    init(color: SavedColor, onSave: @escaping (String) -> Void) {
         self.color = color
         self.onSave = onSave
         _hex = State(initialValue: color.hex)
@@ -79,5 +79,5 @@ struct FavoriteColorEditorSheet: View {
 }
 
 #Preview {
-    FavoriteColorEditorSheet(color: FavoriteColor(hex: "#FF7A45")) { _ in }
+    SavedColorEditorSheet(color: SavedColor(hex: "#FF7A45")) { _ in }
 }
