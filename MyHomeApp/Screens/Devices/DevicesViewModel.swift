@@ -31,6 +31,18 @@ final class DevicesViewModel {
 
     private(set) var loadingDeviceIds: Set<String> = []
 
+    /// The device sheet, or `nil` when no row is open.
+    var detail: DeviceDetailViewModel?
+
+    /// The value each staged control had before the user touched it, so a failed update can be
+    /// rolled back even after the slider has been dragged well past where the request started.
+    private var rollbackValues: [ControlKey: AnyCodable?] = [:]
+
+    private struct ControlKey: Hashable {
+        let deviceId: String
+        let name: String
+    }
+
     private let service: DeviceService
     private let toastStore: ToastStore
 
@@ -52,13 +64,15 @@ final class DevicesViewModel {
         self.selectedRoom = selectedRoom
     }
 
+    // MARK: - Loading
+
     func load() async {
         state = .loading
         do {
             try await fetchDevices()
         } catch {
             state = .failed(error.localizedDescription)
-            toastStore.error(errorMessage(for: error))
+            toastStore.error(DeviceError.text(for: error))
         }
     }
 
@@ -66,7 +80,7 @@ final class DevicesViewModel {
         do {
             try await fetchDevices()
         } catch {
-            toastStore.error(errorMessage(for: error))
+            toastStore.error(DeviceError.text(for: error))
         }
     }
 
@@ -74,6 +88,7 @@ final class DevicesViewModel {
         // TODO: Need to query all devices, or implement lazy loading or something
         let devicesPage = try await service.fetchDevices()
         roomGroups = Self.group(devicesPage.items)
+        rollbackValues = [:]
         state = .loaded
     }
 
@@ -81,48 +96,111 @@ final class DevicesViewModel {
         loadingDeviceIds.contains(device.id)
     }
 
-    func toggle(_ device: Device, key: String, to newValue: Bool) {
-        Task { await apply(.toggle(key: key, value: newValue), to: device) }
+    func device(withId deviceId: String) -> Device? {
+        roomGroups.lazy.compactMap { $0.devices.first { $0.id == deviceId } }.first
     }
 
-    private func apply(_ change: DeviceControlType, to device: Device) async {
-        let previous = device
+    // MARK: - Controls
 
-        loadingDeviceIds.insert(device.id)
-        applyLocally(change, to: device)
+    /// Writes a control locally without contacting the hub, so a slider stays smooth while dragging.
+    func stageControl(_ deviceId: String, name: String, value: AnyCodable) {
+        guard let device = device(withId: deviceId) else { return }
 
-        do {
-            let updated = try await service.updateControl(deviceId: device.id, controlType: change)
-            replaceDevice(updated)
-        } catch {
-            replaceDevice(previous)
-            toastStore.error(errorMessage(for: error))
-            Self.logger.error("Error while updating a control for \"\(device.id)\": \(error.localizedDescription)")
+        let key = ControlKey(deviceId: deviceId, name: name)
+        if rollbackValues[key] == nil {
+            rollbackValues[key] = device.controls?[name]
         }
 
-        loadingDeviceIds.remove(device.id)
+        writeControl(name, of: device, to: value)
     }
 
-    private func applyLocally(_ change: DeviceControlType, to device: Device) {
+    /// Sends the staged value of a control and reconciles the row with the hub's answer.
+    func commitControl(_ deviceId: String, name: String) async {
+        guard let device = device(withId: deviceId), let staged = device.controls?[name] else { return }
+        let rollback = rollbackValues.removeValue(forKey: ControlKey(deviceId: deviceId, name: name))
+
+        loadingDeviceIds.insert(deviceId)
+        defer { loadingDeviceIds.remove(deviceId) }
+
+        do {
+            let updated = try await service.updateControls(deviceId: deviceId, controls: [name: staged])
+            replaceDevice(updated.preservingConfig(from: device))
+        } catch {
+            if let rollback, let current = self.device(withId: deviceId) {
+                writeControl(name, of: current, to: rollback)
+            }
+            toastStore.error(DeviceError.text(for: error))
+            Self.logger.error("Failed to update control \"\(name)\" of \"\(deviceId)\": \(error.localizedDescription)")
+        }
+    }
+
+    /// Replaces one control of a device in the list, leaving its other controls alone.
+    private func writeControl(_ name: String, of device: Device, to value: AnyCodable?) {
         var updated = device
         var controls = updated.controls ?? [:]
-        switch change {
-        case .toggle(let key, let value):
-            controls[key] = AnyCodable(value)
+        if let value {
+            controls[name] = value
+        } else {
+            controls.removeValue(forKey: name)
         }
         updated.controls = controls
         replaceDevice(updated)
     }
 
-    private func replaceDevice(_ device: Device) {
-        roomGroups = roomGroups.map { group in
-            guard let index = group.devices.firstIndex(where: { $0.id == device.id }) else {
-                return group
-            }
-            var devices = group.devices
-            devices[index] = device
-            return DeviceRoomGroup(room: group.room, devices: devices.sorted())
+    func setControl(_ deviceId: String, name: String, to value: AnyCodable) {
+        stageControl(deviceId, name: name, value: value)
+        Task { await commitControl(deviceId, name: name) }
+    }
+
+    // MARK: - Commands
+
+    func sendCommand(_ deviceId: String, name: String, value: AnyCodable, label: String) async {
+        loadingDeviceIds.insert(deviceId)
+        defer { loadingDeviceIds.remove(deviceId) }
+
+        do {
+            _ = try await service.sendCommand(deviceId: deviceId, command: [name: value])
+            toastStore.success("\(label) sent")
+        } catch {
+            toastStore.error(DeviceError.text(for: error))
+            Self.logger.error("Failed to send command \"\(name)\" to \"\(deviceId)\": \(error.localizedDescription)")
         }
+    }
+
+    // MARK: - Device sheet
+
+    func openDetail(_ device: Device) {
+        detail = DeviceDetailViewModel(
+            device: device,
+            service: service,
+            toastStore: toastStore,
+            onChanged: { [weak self] updated in
+                self?.replaceDevice(updated)
+            },
+            onDeleted: { [weak self] deviceId in
+                self?.removeDevice(withId: deviceId)
+                self?.closeDetail()
+            }
+        )
+    }
+
+    func closeDetail() {
+        detail = nil
+    }
+
+    // MARK: - Mutating the list
+
+    private func replaceDevice(_ device: Device) {
+        roomGroups = Self.group(
+            roomGroups
+                .flatMap(\.devices)
+                .map { $0.id == device.id ? device : $0 }
+        )
+    }
+
+    private func removeDevice(withId deviceId: String) {
+        roomGroups = Self.group(roomGroups.flatMap(\.devices).filter { $0.id != deviceId })
+        rollbackValues = rollbackValues.filter { $0.key.deviceId != deviceId }
     }
 
     private static func group(_ devices: [Device]) -> [DeviceRoomGroup] {
@@ -130,20 +208,5 @@ final class DevicesViewModel {
         return grouped
             .map { DeviceRoomGroup(room: $0, devices: $1.sorted()) }
             .sorted(using: KeyPathComparator(\.room))
-    }
-
-    private func errorMessage(for error: Error) -> String {
-        switch error {
-        case HubAPIError.transport:
-            return "No Internet connection"
-        case HubAPIError.unauthorized, HubAPIError.forbidden:
-            return "Your session has expired, please log in again"
-        case HubAPIError.notFound:
-            return "This device does not exist anymore. Try refreshing the page"
-        case HubAPIError.validation:
-            return "Failed updating the device"
-        default:
-            return "Oops... Something went wrong"
-        }
     }
 }

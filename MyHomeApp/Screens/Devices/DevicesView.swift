@@ -8,7 +8,9 @@ struct DevicesView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        @Bindable var viewModel = viewModel
+
+        return NavigationStack {
             content
                 .navigationTitle("Devices")
                 .background(Color("BackgroundPrimary").ignoresSafeArea())
@@ -21,6 +23,9 @@ struct DevicesView: View {
                     if viewModel.state == .idle {
                         await viewModel.load()
                     }
+                }
+                .sheet(item: $viewModel.detail) { detail in
+                    DeviceDetailSheet(viewModel: detail)
                 }
         }
     }
@@ -63,5 +68,6 @@ struct DevicesView: View {
     let store = ServerConfigStore(persistence: InMemoryServerConfigPersistence(initial: [server]))
     return DevicesView(service: MockDeviceService(), toastStore: ToastStore())
         .environment(store)
+        .environment(FavoriteColorsStore(persistence: InMemoryFavoriteColorsPersistence()))
         .task { await store.load() }
 }

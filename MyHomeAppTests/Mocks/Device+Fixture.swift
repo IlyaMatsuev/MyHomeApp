@@ -22,7 +22,7 @@ extension Device {
 }
 
 final class DeviceFixtureBuilder {
-    private let externalId = UUID().uuidString
+    private var externalId = UUID().uuidString
     private let name: String
     private let type: DeviceType
     private let brand: DeviceBrand
@@ -43,6 +43,8 @@ final class DeviceFixtureBuilder {
     private var measurements: [String: AnyCodable] = [:]
     private var measurementsUpdatedAt: Date?
 
+    private var config: DeviceConfig?
+
     private var createdAt = Date(timeIntervalSince1970: 0)
     private var updatedAt = Date(timeIntervalSince1970: 0)
 
@@ -54,6 +56,12 @@ final class DeviceFixtureBuilder {
         self.name = name
         self.type = type
         self.brand = brand
+    }
+
+    /// Pins the identity, so a test can build a second version of the same device.
+    func withId(_ externalId: String) -> Self {
+        self.externalId = externalId
+        return self
     }
 
     func inRoom(_ room: DeviceRoom) -> Self {
@@ -101,6 +109,11 @@ final class DeviceFixtureBuilder {
         return self
     }
 
+    func withConfig(_ config: DeviceConfig) -> Self {
+        self.config = config
+        return self
+    }
+
     func withTimestamps(createdAt: Date, updatedAt: Date) -> Self {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -123,6 +136,7 @@ final class DeviceFixtureBuilder {
             zigbeeIeeeAddress: zigbeeIeeeAddress,
             controls: controls,
             measurements: measurements,
+            config: config,
             controlsUpdatedAt: controlsUpdatedAt,
             measurementsUpdatedAt: measurementsUpdatedAt,
             createdAt: createdAt,

@@ -10,6 +10,10 @@ final class ToastStore {
         current = Toast(message: message, kind: .error)
     }
 
+    func success(_ message: String) {
+        current = Toast(message: message, kind: .success)
+    }
+
     func dismiss() {
         current = nil
     }
