@@ -14,65 +14,117 @@ final class AppContainer {
     private let scenarioService: any ScenarioService
 
     init(
-        serverConfigPersistence: any ServerConfigPersistence = UserDefaultsServerConfigPersistence(),
-        savedColorsPersistence: any SavedColorsPersistence = UserDefaultsSavedColorsPersistence(),
-        registrationPersistence: any RegistrationPersistence = UserDefaultsRegistrationPersistence(),
-        tokenPersistence: any AuthTokenPersistence = KeychainAuthTokenPersistance(),
-        urlSession: URLSession = .shared
+        sessionStore: SessionStore,
+        serverConfigStore: ServerConfigStore,
+        registrationStore: RegistrationStore,
+        savedColorsStore: SavedColorsStore,
+        toastStore: ToastStore,
+
+        serverConfigService: any ServerConfigService,
+        deviceService: any DeviceService,
+        scenarioService: any ScenarioService,
     ) {
+        self.sessionStore = sessionStore
+        self.serverConfigStore = serverConfigStore
+        self.registrationStore = registrationStore
+        self.savedColorsStore = savedColorsStore
+        self.toastStore = toastStore
+        self.serverConfigService = serverConfigService
+        self.deviceService = deviceService
+        self.scenarioService = scenarioService
+    }
+
+    static func live() -> AppContainer {
+        let tokenPersistence = KeychainAuthTokenPersistance()
+        let serverConfigPersistence = UserDefaultsServerConfigPersistence()
+        let registrationPersistence = UserDefaultsRegistrationPersistence()
+        let savedColorsPersistence = UserDefaultsSavedColorsPersistence()
+
+        let apiClient = HubAPIClient()
+
+        let authService = HubAuthService(client: apiClient)
+        let registrationService = HubRegistrationService(client: apiClient)
+        let serverConfigService = HubServerConfigService(client: apiClient)
+        let deviceService = HubDeviceService(client: apiClient)
+        let scenarioService = HubScenarioService(client: apiClient)
+
+        let sessionStore = SessionStore(service: authService, tokenPersistence: tokenPersistence)
         let serverConfigStore = ServerConfigStore(persistence: serverConfigPersistence)
-        let apiClient = HubAPIClient(session: urlSession)
-        let sessionStore = SessionStore(
-            service: HubAuthService(client: apiClient),
-            tokenPersistence: tokenPersistence
+        let registrationStore = RegistrationStore(
+            service: registrationService,
+            persistence: registrationPersistence
         )
+        let savedColorsStore = SavedColorsStore(persistence: savedColorsPersistence)
+
         apiClient.setServerProvider { serverConfigStore.selectedServer }
         apiClient.setTokenProvider { sessionStore.sessionToken }
         apiClient.setRefreshHandler { await sessionStore.refresh() }
 
-        self.serverConfigStore = serverConfigStore
-        self.sessionStore = sessionStore
-        self.toastStore = ToastStore()
-        self.savedColorsStore = SavedColorsStore(persistence: savedColorsPersistence)
-        self.registrationStore = RegistrationStore(
-            service: HubRegistrationService(client: apiClient),
-            persistence: registrationPersistence
+        return AppContainer(
+            sessionStore: sessionStore,
+            serverConfigStore: serverConfigStore,
+            registrationStore: registrationStore,
+            savedColorsStore: savedColorsStore,
+            toastStore: ToastStore(),
+            serverConfigService: serverConfigService,
+            deviceService: deviceService,
+            scenarioService: scenarioService,
         )
-        self.serverConfigService = HubServerConfigService(client: apiClient)
-        self.deviceService = HubDeviceService(client: apiClient)
-        self.scenarioService = HubScenarioService(client: apiClient)
     }
 
-    static func live() -> AppContainer {
-        return AppContainer()
+    static func preview() -> AppContainer {
+        let authService = MockAuthService()
+        let registrationService = MockRegistrationService()
+        let serverConfigService = MockServerConfigService()
+        let deviceService = MockDeviceService()
+        let scenarioService = MockScenarioService()
+
+        let sessionStore = SessionStore(service: authService, tokenPersistence: InMemoryAuthTokenPersistence())
+        let serverConfigStore = ServerConfigStore(persistence: InMemoryServerConfigPersistence())
+        let registrationStore = RegistrationStore(
+            service: registrationService,
+            persistence: InMemoryRegistrationPersistence()
+        )
+        let savedColorsStore = SavedColorsStore(persistence: InMemorySavedColorsPersistence())
+
+        return AppContainer(
+            sessionStore: sessionStore,
+            serverConfigStore: serverConfigStore,
+            registrationStore: registrationStore,
+            savedColorsStore: savedColorsStore,
+            toastStore: ToastStore(),
+            serverConfigService: serverConfigService,
+            deviceService: deviceService,
+            scenarioService: scenarioService,
+        )
     }
 
     // MARK: - Screen view models
     func buildLoginViewModel() -> LoginViewModel {
-        
+        LoginViewModel(sessionStore: sessionStore)
     }
 
     func buildRegisterViewModel(email: String) -> RegisterViewModel {
-        
+        RegisterViewModel(sessionStore: sessionStore, email: email)
     }
 
-    func buildRegistrationRequestViewModel() -> RegistrationRequestViewModel {
-        
+    func buildRegistrationRequestViewModel(email: String, comment: String) -> RegistrationRequestViewModel {
+        RegistrationRequestViewModel(registrationStore: registrationStore, email: email, comment: comment)
     }
 
     func buildRegistrationStatusViewModel() -> RegistrationStatusViewModel {
-        
+        RegistrationStatusViewModel(registrationStore: registrationStore)
     }
 
-    func buildServerSetupViewModel() -> ServerSetupViewModel {
-        
+    func buildServerSetupViewModel(mode: ServerSetupMode) -> ServerSetupViewModel {
+        ServerSetupViewModel(mode: mode, store: serverConfigStore, service: serverConfigService)
     }
 
     func buildDevicesViewModel() -> DevicesViewModel {
-        
+        DevicesViewModel(service: deviceService, toastStore: toastStore)
     }
 
-    func BuildScenariosViewModel() -> ScenariosViewModel {
-        
+    func buildScenariosViewModel() -> ScenariosViewModel {
+        ScenariosViewModel(service: scenarioService, deviceService: deviceService, toastStore: toastStore)
     }
 }
