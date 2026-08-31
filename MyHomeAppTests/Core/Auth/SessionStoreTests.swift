@@ -5,13 +5,13 @@ import Testing
 @MainActor
 struct SessionStoreTests {
     private let service: StubAuthService
-    private let tokenStore: StubTokenStore
+    private let tokenPersistence: StubAuthTokenPersistence
     private let store: SessionStore
 
     init() {
         service = StubAuthService()
-        tokenStore = StubTokenStore()
-        store = SessionStore(service: service, tokenStore: tokenStore)
+        tokenPersistence = StubAuthTokenPersistence()
+        store = SessionStore(service: service, tokenPersistence: tokenPersistence)
     }
 
     // MARK: - init
@@ -27,7 +27,7 @@ struct SessionStoreTests {
     @Test
     func loadWithPersistedTokenBecomesAuthenticated() async throws {
         let token = AuthToken.fixture(accessToken: "abc")
-        tokenStore.loadResult = .success(token)
+        tokenPersistence.loadResult = .success(token)
 
         await store.load()
 
@@ -38,7 +38,7 @@ struct SessionStoreTests {
 
     @Test
     func loadWithNoPersistedTokenBecomesUnauthenticated() async {
-        tokenStore.loadResult = .success(nil)
+        tokenPersistence.loadResult = .success(nil)
 
         await store.load()
 
@@ -47,8 +47,8 @@ struct SessionStoreTests {
     }
 
     @Test
-    func loadWhenTokenStoreThrowsBecomesUnauthenticated() async {
-        tokenStore.loadResult = .failure(TokenStoreError.keychain(status: -1))
+    func loadWhenAuthTokenPersistenceThrowsBecomesUnauthenticated() async {
+        tokenPersistence.loadResult = .failure(AuthTokenPersistanceError.keychain(status: -1))
 
         await store.load()
 
@@ -66,7 +66,7 @@ struct SessionStoreTests {
         try await store.login(email: "user@example.com", password: "password")
 
         #expect(store.state == .authenticated(AuthSession(token: token)))
-        #expect(tokenStore.savedTokens == [token])
+        #expect(tokenPersistence.savedTokens == [token])
         #expect(service.loginCalls.count == 1)
         let loginCall = try #require(service.loginCalls.first)
         #expect(loginCall.email == "user@example.com")
@@ -84,7 +84,7 @@ struct SessionStoreTests {
         }
 
         #expect(store.state == .unauthenticated)
-        #expect(tokenStore.savedTokens.isEmpty)
+        #expect(tokenPersistence.savedTokens.isEmpty)
     }
 
     // MARK: - register()
@@ -101,7 +101,7 @@ struct SessionStoreTests {
         #expect(call.email == "new@home.dev")
         #expect(call.password == "secret")
         #expect(store.state == .unauthenticated)
-        #expect(tokenStore.savedTokens.isEmpty)
+        #expect(tokenPersistence.savedTokens.isEmpty)
     }
 
     @Test
@@ -130,7 +130,7 @@ struct SessionStoreTests {
     @Test
     func refreshOnSuccessReturnsTrueAndSavesNewToken() async throws {
         let original = AuthToken.fixture(accessToken: "old-access", refreshToken: "old-refresh")
-        tokenStore.loadResult = .success(original)
+        tokenPersistence.loadResult = .success(original)
         await store.load()
 
         let renewed = AuthToken.fixture(accessToken: "new-access", refreshToken: "new-refresh")
@@ -140,14 +140,14 @@ struct SessionStoreTests {
 
         #expect(succeeded)
         #expect(service.refreshCalls == ["old-refresh"])
-        #expect(tokenStore.savedTokens == [renewed])
+        #expect(tokenPersistence.savedTokens == [renewed])
         #expect(store.state == .authenticated(AuthSession(token: renewed)))
     }
 
     @Test
     func refreshOnSessionExpiredReturnsFalseClearsSessionAndBecomesUnauthenticated() async {
         let original = AuthToken.fixture(accessToken: "old", refreshToken: "expired-refresh")
-        tokenStore.loadResult = .success(original)
+        tokenPersistence.loadResult = .success(original)
         await store.load()
         service.refreshResult = .failure(AuthError.sessionExpired)
 
@@ -155,13 +155,13 @@ struct SessionStoreTests {
 
         #expect(!succeeded)
         #expect(store.state == .unauthenticated)
-        #expect(tokenStore.clearCallCount == 1)
+        #expect(tokenPersistence.clearCallCount == 1)
     }
 
     @Test
     func refreshOnUnexpectedErrorReturnsFalseAndPreservesSession() async {
         let original = AuthToken.fixture(accessToken: "old", refreshToken: "refresh")
-        tokenStore.loadResult = .success(original)
+        tokenPersistence.loadResult = .success(original)
         await store.load()
         service.refreshResult = .failure(AuthError.unexpected)
 
@@ -169,6 +169,6 @@ struct SessionStoreTests {
 
         #expect(!succeeded)
         #expect(store.state == .authenticated(AuthSession(token: original)))
-        #expect(tokenStore.clearCallCount == 0)
+        #expect(tokenPersistence.clearCallCount == 0)
     }
 }

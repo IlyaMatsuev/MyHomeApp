@@ -28,7 +28,7 @@ struct RegisterView: View {
 }
 
 #Preview {
-    let sessionStore = SessionStore(service: MockAuthService(operationDelay: .zero), tokenStore: InMemoryTokenStore())
+    let sessionStore = SessionStore(service: MockAuthService(operationDelay: .zero), tokenPersistence: InMemoryAuthTokenPersistence())
     let request = RegistrationRequest(
         externalId: "abc",
         email: "new@home.dev",

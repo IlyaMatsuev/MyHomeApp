@@ -57,7 +57,7 @@ struct RootView: View {
 }
 
 #Preview("Unconfigured") {
-    let sessionStore = SessionStore(service: MockAuthService(), tokenStore: InMemoryTokenStore())
+    let sessionStore = SessionStore(service: MockAuthService(), tokenPersistence: InMemoryAuthTokenPersistence())
     let registrationStore = RegistrationStore(
         service: MockRegistrationService(),
         persistence: InMemoryRegistrationPersistence()
@@ -74,7 +74,7 @@ struct RootView: View {
     let apiClient = HubAPIClient()
     let sessionStore = SessionStore(
         service: HubAuthService(client: apiClient),
-        tokenStore: InMemoryTokenStore()
+        tokenPersistence: InMemoryAuthTokenPersistence()
     )
     apiClient.setServerProvider { serverConfigStore.selectedServer }
     apiClient.setTokenProvider { sessionStore.sessionToken }
@@ -92,7 +92,7 @@ struct RootView: View {
 }
 
 #Preview("Configured and signed out") {
-    let sessionStore = SessionStore(service: MockAuthService(), tokenStore: InMemoryTokenStore())
+    let sessionStore = SessionStore(service: MockAuthService(), tokenPersistence: InMemoryAuthTokenPersistence())
     let registrationStore = RegistrationStore(
         service: MockRegistrationService(),
         persistence: InMemoryRegistrationPersistence()

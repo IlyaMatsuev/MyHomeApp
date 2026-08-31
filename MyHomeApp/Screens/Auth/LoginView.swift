@@ -71,7 +71,7 @@ struct LoginView: View {
 }
 
 #Preview {
-    let sessionStore = SessionStore(service: MockAuthService(operationDelay: .zero), tokenStore: InMemoryTokenStore())
+    let sessionStore = SessionStore(service: MockAuthService(operationDelay: .zero), tokenPersistence: InMemoryAuthTokenPersistence())
     let registrationStore = RegistrationStore(
         service: MockRegistrationService(operationDelay: .zero),
         persistence: InMemoryRegistrationPersistence()

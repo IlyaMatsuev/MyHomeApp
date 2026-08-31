@@ -31,6 +31,6 @@ struct SettingsView: View {
 }
 
 #Preview {
-    let sessionStore = SessionStore(service: MockAuthService(), tokenStore: InMemoryTokenStore())
+    let sessionStore = SessionStore(service: MockAuthService(), tokenPersistence: InMemoryAuthTokenPersistence())
     return SettingsView().environment(sessionStore)
 }

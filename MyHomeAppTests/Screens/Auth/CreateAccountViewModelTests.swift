@@ -10,7 +10,7 @@ struct CreateAccountViewModelTests {
 
     init() {
         service = StubAuthService()
-        store = SessionStore(service: service, tokenStore: InMemoryTokenStore())
+        store = SessionStore(service: service, tokenPersistence: InMemoryAuthTokenPersistence())
         viewModel = RegisterViewModel(sessionStore: store, email: "new@home.dev")
     }
 

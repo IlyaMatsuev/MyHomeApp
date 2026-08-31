@@ -16,7 +16,7 @@ struct MyHomeApp: App {
         let apiClient = HubAPIClient()
         let sessionStore = SessionStore(
             service: HubAuthService(client: apiClient),
-            tokenStore: KeychainTokenStore()
+            tokenPersistence: KeychainAuthTokenPersistance()
         )
         apiClient.setServerProvider { serverConfigStore.selectedServer }
         apiClient.setTokenProvider { sessionStore.sessionToken }
