@@ -1,0 +1,134 @@
+import Foundation
+import Testing
+@testable import MyHomeApp
+
+@MainActor
+struct SavedColorsStoreTests {
+    private let persistence = InMemorySavedColorsPersistence()
+    private let store: SavedColorsStore
+
+    init() {
+        store = SavedColorsStore(persistence: persistence)
+    }
+
+    // MARK: - Loading
+
+    @Test
+    func startsFromWhateverWasPersisted() throws {
+        let saved = [SavedColor(hex: "#FF7A45"), SavedColor(hex: "#4ADE80")]
+        let persistence = InMemorySavedColorsPersistence(initial: saved)
+
+        let store = SavedColorsStore(persistence: persistence)
+
+        #expect(store.colors == saved)
+    }
+
+    // MARK: - Identity
+
+    @Test
+    func identifiesAColourByItsNormalizedHex() {
+        #expect(SavedColor(hex: "b7d4ff").id == "#B7D4FF")
+        #expect(SavedColor(hex: "#B7D4FF") == SavedColor(hex: "b7d4ff"))
+    }
+
+    // MARK: - Adding
+
+    @Test
+    func addsAColourAndPersistsIt() throws {
+        store.add("#B7D4FF")
+
+        #expect(store.colors.map(\.hex) == ["#B7D4FF"])
+        #expect(try persistence.load().map(\.hex) == ["#B7D4FF"])
+    }
+
+    @Test
+    func storesOneSpellingOfAColour() {
+        store.add("b7d4ff")
+
+        #expect(store.colors.map(\.hex) == ["#B7D4FF"])
+    }
+
+    @Test
+    func ignoresAColourItAlreadyHas() {
+        store.add("#B7D4FF")
+        store.add("b7d4ff")
+
+        #expect(store.colors.count == 1)
+    }
+
+    @Test
+    func ignoresSomethingThatIsNotAHexColour() {
+        store.add("cornflower")
+
+        #expect(store.colors.isEmpty)
+    }
+
+    @Test
+    func containsMatchesRegardlessOfSpelling() {
+        store.add("#B7D4FF")
+
+        #expect(store.contains("b7d4ff"))
+        #expect(store.contains("#FF7A45") == false)
+        #expect(store.contains("cornflower") == false)
+    }
+
+    // MARK: - Editing
+
+    @Test
+    func editingAColourKeepsItsPlaceInTheList() throws {
+        store.add("#FF7A45")
+        store.add("#4ADE80")
+        let first = try #require(store.colors.first)
+
+        store.update(first, to: "#000000")
+
+        #expect(store.colors.map(\.hex) == ["#000000", "#4ADE80"])
+        #expect(try persistence.load().map(\.hex) == ["#000000", "#4ADE80"])
+    }
+
+    @Test
+    func ignoresAnEditToSomethingThatIsNotAHexColour() throws {
+        store.add("#FF7A45")
+        let first = try #require(store.colors.first)
+
+        store.update(first, to: "cornflower")
+
+        #expect(store.colors.map(\.hex) == ["#FF7A45"])
+    }
+
+    /// Editing one saved color onto another would leave two identical circles, so the edited one goes.
+    @Test
+    func editingAColourOntoOneAlreadySavedDropsTheDuplicate() throws {
+        store.add("#FF7A45")
+        store.add("#4ADE80")
+        let second = try #require(store.colors.last)
+
+        store.update(second, to: "#FF7A45")
+
+        #expect(store.colors.map(\.hex) == ["#FF7A45"])
+    }
+
+    @Test
+    func ignoresAnEditToAColourThatIsNoLongerSaved() {
+        let stale = SavedColor(hex: "#FF7A45")
+        store.add("#4ADE80")
+
+        store.update(stale, to: "#000000")
+
+        #expect(store.colors.map(\.hex) == ["#4ADE80"])
+    }
+
+    // MARK: - Removing
+
+    @Test
+    func removesAColourAndPersistsTheRest() throws {
+        store.add("#FF7A45")
+        store.add("#4ADE80")
+        let first = try #require(store.colors.first)
+
+        store.remove(first)
+
+        #expect(store.colors.map(\.hex) == ["#4ADE80"])
+        #expect(try persistence.load().map(\.hex) == ["#4ADE80"])
+    }
+}

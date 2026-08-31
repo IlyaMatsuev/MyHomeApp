@@ -24,9 +24,18 @@ struct HubDeviceServiceTests {
         let request = try #require(client.sentRequests.first)
         #expect(request.method == .get)
         #expect(request.path == "/devices")
-        #expect(request.query == ["pageSize": "20"])
         #expect(request.protected == true)
         #expect(request.body == nil)
+    }
+
+    @Test
+    func fetchDevicesAsksTheHubForDeviceConfigs() async throws {
+        client.response = .data(Self.encodeEmptyPage())
+
+        _ = try await service.fetchDevices()
+
+        let request = try #require(client.sentRequests.first)
+        #expect(request.query == ["pageSize": "20", "includeConfig": "true"])
     }
 
     // MARK: - fetchDevices() — success
@@ -35,6 +44,7 @@ struct HubDeviceServiceTests {
     func fetchDevicesReturnsDecodedPage() async throws {
         let lamp = Device.fixture(name: "Lamp")
             .inRoom(.livingRoom)
+            .withConfig(MockDeviceConfigs.tuyaLED)
             .build()
         let speaker = Device.fixture(name: "Speaker")
             .inRoom(.livingRoom)
@@ -73,17 +83,13 @@ struct HubDeviceServiceTests {
         }
     }
 
-    // MARK: - updateControl() — request shape
+    // MARK: - updateControls() — request shape
 
     @Test
-    func updateControlSendsPutDeviceByIdAsProtectedRequest() async throws {
-        let device = Device.fixture(name: "Lamp").build()
-        client.response = .data(try Self.encode(device))
+    func updateControlsSendsPutDeviceByIdAsProtectedRequest() async throws {
+        client.response = .data(try Self.encode(Device.fixture(name: "Lamp").build()))
 
-        _ = try await service.updateControl(
-            deviceId: "device-42",
-            controlType: .toggle(key: "on", value: true)
-        )
+        _ = try await service.updateControls(deviceId: "device-42", controls: ["on": AnyCodable(true)])
 
         #expect(client.sentRequests.count == 1)
         let request = try #require(client.sentRequests.first)
@@ -93,77 +99,115 @@ struct HubDeviceServiceTests {
     }
 
     @Test
-    func updateControlSerializesControlsBodyAsKeyedDictionary() async throws {
-        let device = Device.fixture(name: "Lamp").build()
-        client.response = .data(try Self.encode(device))
+    func updateControlsNestsTheValuesUnderControls() async throws {
+        client.response = .data(try Self.encode(Device.fixture(name: "Lamp").build()))
 
-        _ = try await service.updateControl(
+        _ = try await service.updateControls(
             deviceId: "device-42",
-            controlType: .toggle(key: "on", value: true)
+            controls: ["on": AnyCodable(false), "brightness": AnyCodable(40)]
         )
 
         let request = try #require(client.sentRequests.first)
         let body = try #require(request.body)
         let decoded = try JSONDecoder().decode(ControlsPayload.self, from: body)
-        #expect(decoded.controls == ["on": AnyCodable(true)])
+        #expect(decoded.controls == ["on": AnyCodable(false), "brightness": AnyCodable(40)])
     }
 
     @Test
-    func updateControlSerializesFalseToggleValue() async throws {
-        let device = Device.fixture(name: "Lamp").build()
+    func updateControlsReturnsDecodedDevice() async throws {
+        let device = Device.fixture(name: "Lamp").inRoom(.livingRoom).build()
         client.response = .data(try Self.encode(device))
 
-        _ = try await service.updateControl(
-            deviceId: "device-42",
-            controlType: .toggle(key: "on", value: false)
-        )
-
-        let request = try #require(client.sentRequests.first)
-        let body = try #require(request.body)
-        let decoded = try JSONDecoder().decode(ControlsPayload.self, from: body)
-        #expect(decoded.controls == ["on": AnyCodable(false)])
-    }
-
-    // MARK: - updateControl() — success
-
-    @Test
-    func updateControlReturnsDecodedDevice() async throws {
-        let device = Device.fixture(name: "Lamp")
-            .inRoom(.livingRoom)
-            .build()
-        client.response = .data(try Self.encode(device))
-
-        let result = try await service.updateControl(
-            deviceId: device.externalId,
-            controlType: .toggle(key: "on", value: true)
-        )
+        let result = try await service.updateControls(deviceId: device.externalId, controls: ["on": AnyCodable(true)])
 
         #expect(result == device)
     }
 
-    // MARK: - updateControl() — failure paths
-
     @Test
-    func updateControlPropagatesClientError() async {
+    func updateControlsPropagatesClientError() async {
         client.response = .error(HubAPIError.unauthorized)
 
         await #expect(throws: HubAPIError.unauthorized) {
-            _ = try await service.updateControl(
-                deviceId: "device-42",
-                controlType: .toggle(key: "on", value: true)
-            )
+            _ = try await service.updateControls(deviceId: "device-42", controls: ["on": AnyCodable(true)])
         }
     }
 
-    @Test
-    func updateControlPropagatesDecodingError() async {
-        client.response = .data(Data("not-json".utf8))
+    // MARK: - updateDevice()
 
-        await #expect(throws: DecodingError.self) {
-            _ = try await service.updateControl(
-                deviceId: "device-42",
-                controlType: .toggle(key: "on", value: true)
-            )
+    @Test
+    func updateDeviceSendsPutDeviceByIdWithTheDetailsPayload() async throws {
+        client.response = .data(try Self.encode(Device.fixture(name: "Lamp").build()))
+        let payload = DeviceUpdatePayload(name: "Desk lamp", room: .office)
+
+        _ = try await service.updateDevice(deviceId: "device-42", payload: payload)
+
+        let request = try #require(client.sentRequests.first)
+        #expect(request.method == .put)
+        #expect(request.path == "/devices/device-42")
+        let body = try #require(request.body)
+        let decoded = try JSONDecoder().decode(DetailsPayload.self, from: body)
+        #expect(decoded.name == "Desk lamp")
+        #expect(decoded.room == "office")
+    }
+
+    @Test
+    func updateDeviceLeavesUnsetFieldsOutOfTheBody() async throws {
+        client.response = .data(try Self.encode(Device.fixture(name: "Lamp").build()))
+
+        _ = try await service.updateDevice(deviceId: "device-42", payload: DeviceUpdatePayload(name: "Desk lamp"))
+
+        let request = try #require(client.sentRequests.first)
+        let body = try #require(request.body)
+        let json = try #require(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+        #expect(Set(json.keys) == ["name"])
+    }
+
+    // MARK: - sendCommand()
+
+    @Test
+    func sendCommandPostsTheCommandToTheDeviceCommandEndpoint() async throws {
+        let speaker = Device.fixture(name: "Speaker", type: .speaker, brand: .google).build()
+        client.response = .data(try Self.encode(speaker))
+
+        _ = try await service.sendCommand(deviceId: "device-42", command: ["text": AnyCodable("Dinner is ready")])
+
+        let request = try #require(client.sentRequests.first)
+        #expect(request.method == .post)
+        #expect(request.path == "/devices/device-42/command")
+        #expect(request.protected == true)
+        let body = try #require(request.body)
+        let decoded = try JSONDecoder().decode([String: AnyCodable].self, from: body)
+        #expect(decoded == ["text": AnyCodable("Dinner is ready")])
+    }
+
+    @Test
+    func sendCommandPropagatesClientError() async {
+        client.response = .error(HubAPIError.validation("text", "Text is required"))
+
+        await #expect(throws: HubAPIError.validation("text", "Text is required")) {
+            _ = try await service.sendCommand(deviceId: "device-42", command: ["text": AnyCodable("")])
+        }
+    }
+
+    // MARK: - deleteDevice()
+
+    @Test
+    func deleteDeviceSendsDeleteDeviceById() async throws {
+        try await service.deleteDevice(deviceId: "device-42")
+
+        let request = try #require(client.sentRequests.first)
+        #expect(request.method == .delete)
+        #expect(request.path == "/devices/device-42")
+        #expect(request.protected == true)
+        #expect(request.body == nil)
+    }
+
+    @Test
+    func deleteDevicePropagatesClientError() async {
+        client.response = .error(HubAPIError.notFound)
+
+        await #expect(throws: HubAPIError.notFound) {
+            try await service.deleteDevice(deviceId: "device-42")
         }
     }
 
@@ -171,6 +215,11 @@ struct HubDeviceServiceTests {
 
     private struct ControlsPayload: Decodable {
         let controls: [String: AnyCodable]
+    }
+
+    private struct DetailsPayload: Decodable {
+        let name: String?
+        let room: String?
     }
 
     private static func encode<T: Encodable>(_ value: T) throws -> Data {
