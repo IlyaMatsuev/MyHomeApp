@@ -39,11 +39,12 @@ final class SavedColorsStore {
     func update(_ color: SavedColor, to hex: String) {
         guard let normalized = hex.normalizedHexColor,
               let index = colors.firstIndex(where: { $0.id == color.id }) else { return }
-        guard !colors.contains(where: { $0.id != color.id && $0.hex == normalized }) else {
+        // Editing one saved colour onto another would leave two identical circles.
+        guard normalized == color.hex || !contains(normalized) else {
             remove(color)
             return
         }
-        colors[index].hex = normalized
+        colors[index] = SavedColor(hex: normalized)
         persist()
     }
 

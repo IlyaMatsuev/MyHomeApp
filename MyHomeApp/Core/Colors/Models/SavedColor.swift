@@ -1,14 +1,13 @@
-import Foundation
-
 /// A colour the user has kept for reuse across every device with a colour control.
 ///
-/// The identity is local: the hub knows nothing about saved colors, it only ever receives `hex`.
+/// The hex *is* the identity: `SavedColorsStore` normalizes it and refuses duplicates, so no two
+/// saved colours can share one. The hub knows nothing about them — it only ever receives `hex`.
 struct SavedColor: Codable, Identifiable, Hashable {
-    let id: UUID
-    var hex: String
+    let hex: String
 
-    init(id: UUID = UUID(), hex: String) {
-        self.id = id
+    var id: String { hex }
+
+    init(hex: String) {
         self.hex = hex.normalizedHexColor ?? hex
     }
 }

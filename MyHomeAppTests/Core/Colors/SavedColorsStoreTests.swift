@@ -23,6 +23,14 @@ struct SavedColorsStoreTests {
         #expect(store.colors == saved)
     }
 
+    // MARK: - Identity
+
+    @Test
+    func identifiesAColourByItsNormalizedHex() {
+        #expect(SavedColor(hex: "b7d4ff").id == "#B7D4FF")
+        #expect(SavedColor(hex: "#B7D4FF") == SavedColor(hex: "b7d4ff"))
+    }
+
     // MARK: - Adding
 
     @Test
