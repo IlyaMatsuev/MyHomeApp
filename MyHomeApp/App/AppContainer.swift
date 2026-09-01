@@ -72,31 +72,8 @@ final class AppContainer {
         )
     }
 
-    static func preview() -> AppContainer {
-        let authService = MockAuthService()
-        let registrationService = MockRegistrationService()
-        let serverConfigService = MockServerConfigService()
-        let deviceService = MockDeviceService()
-        let scenarioService = MockScenarioService()
-
-        let sessionStore = SessionStore(service: authService, tokenPersistence: InMemoryAuthTokenPersistence())
-        let serverConfigStore = ServerConfigStore(persistence: InMemoryServerConfigPersistence())
-        let registrationStore = RegistrationStore(
-            service: registrationService,
-            persistence: InMemoryRegistrationPersistence()
-        )
-        let savedColorsStore = SavedColorsStore(persistence: InMemorySavedColorsPersistence())
-
-        return AppContainer(
-            sessionStore: sessionStore,
-            serverConfigStore: serverConfigStore,
-            registrationStore: registrationStore,
-            savedColorsStore: savedColorsStore,
-            toastStore: ToastStore(),
-            serverConfigService: serverConfigService,
-            deviceService: deviceService,
-            scenarioService: scenarioService,
-        )
+    static func preview() -> AppContainerPreviewBuilder {
+        AppContainerPreviewBuilder()
     }
 
     // MARK: - Screen view models
