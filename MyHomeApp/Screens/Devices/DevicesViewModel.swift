@@ -71,8 +71,7 @@ final class DevicesViewModel {
         do {
             try await fetchDevices()
         } catch {
-            state = .failed(error.localizedDescription)
-            toastStore.error(DeviceError.text(for: error))
+            state = .failed(DeviceError.text(for: error))
         }
     }
 
