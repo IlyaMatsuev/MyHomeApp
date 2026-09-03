@@ -115,8 +115,9 @@ final class ScenariosViewModel {
             scenarios = page.items.sorted()
             state = .loaded
         } catch {
-            toastStore.error(ScenarioError.text(for: error))
-            if !keepingContentOnFailure {
+            if keepingContentOnFailure {
+                toastStore.error(ScenarioError.text(for: error))
+            } else {
                 scenarios = []
                 state = .failed(ScenarioError.text(for: error))
             }
