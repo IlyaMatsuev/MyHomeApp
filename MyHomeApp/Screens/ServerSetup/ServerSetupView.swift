@@ -1,8 +1,7 @@
 import SwiftUI
 
 struct ServerSetupView: View {
-    @Environment(ServerConfigStore.self) private var serverConfigStore
-    @Environment(\.serverConfigService) private var serverConfigService
+    @Environment(AppContainer.self) private var container
     @State private var viewModel: ServerSetupViewModel?
 
     var mode: ServerSetupMode = .initialSetup
@@ -20,19 +19,12 @@ struct ServerSetupView: View {
         .toolbar(.hidden, for: .tabBar)
         .onAppear {
             if viewModel == nil {
-                viewModel = ServerSetupViewModel(
-                    mode: mode,
-                    store: serverConfigStore,
-                    service: serverConfigService
-                )
+                viewModel = container.buildServerSetupViewModel(mode: mode)
             }
         }
     }
 }
 
 #Preview {
-    let store = ServerConfigStore(persistence: InMemoryServerConfigPersistence())
-    return ServerSetupView()
-        .environment(store)
-        .task { await store.load() }
+    ServerSetupView().inject(AppContainer.preview().build())
 }

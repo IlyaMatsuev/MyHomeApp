@@ -57,50 +57,10 @@ struct RootView: View {
 }
 
 #Preview("Unconfigured") {
-    let sessionStore = SessionStore(service: MockAuthService(), tokenPersistence: InMemoryAuthTokenPersistence())
-    let registrationStore = RegistrationStore(
-        service: MockRegistrationService(),
-        persistence: InMemoryRegistrationPersistence()
-    )
-    let serverConfigStore = ServerConfigStore(persistence: InMemoryServerConfigPersistence())
-    return RootView()
-        .environment(sessionStore)
-        .environment(registrationStore)
-        .environment(serverConfigStore)
-}
-
-#Preview("Unconfigured (live)") {
-    let serverConfigStore = ServerConfigStore(persistence: InMemoryServerConfigPersistence())
-    let apiClient = HubAPIClient()
-    let sessionStore = SessionStore(
-        service: HubAuthService(client: apiClient),
-        tokenPersistence: InMemoryAuthTokenPersistence()
-    )
-    apiClient.setServerProvider { serverConfigStore.selectedServer }
-    apiClient.setTokenProvider { sessionStore.sessionToken }
-
-    let registrationStore = RegistrationStore(
-        service: HubRegistrationService(client: apiClient),
-        persistence: InMemoryRegistrationPersistence()
-    )
-    let serverConfigService = HubServerConfigService(client: apiClient)
-    return RootView()
-        .environment(sessionStore)
-        .environment(registrationStore)
-        .environment(serverConfigStore)
-        .environment(\.serverConfigService, serverConfigService)
+    RootView().inject(AppContainer.preview().build())
 }
 
 #Preview("Configured and signed out") {
-    let sessionStore = SessionStore(service: MockAuthService(), tokenPersistence: InMemoryAuthTokenPersistence())
-    let registrationStore = RegistrationStore(
-        service: MockRegistrationService(),
-        persistence: InMemoryRegistrationPersistence()
-    )
     let serverConfig = Server(.http, "hub.local:8080", remote: false)
-    let serverConfigStore = ServerConfigStore(persistence: InMemoryServerConfigPersistence(initial: [serverConfig]))
-    return RootView()
-        .environment(sessionStore)
-        .environment(registrationStore)
-        .environment(serverConfigStore)
+    return RootView().inject(AppContainer.preview().withServers([serverConfig]).build())
 }

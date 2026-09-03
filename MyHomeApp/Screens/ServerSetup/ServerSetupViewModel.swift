@@ -12,7 +12,6 @@ final class ServerSetupViewModel {
     private static let serverTemplate = Server(.https, "", remote: false, label: defaultLabel)
 
     private let store: ServerConfigStore
-    private let service: ServerConfigService
 
     private(set) var errorMessage: String?
     private(set) var draftErrorMessage: String?
@@ -41,10 +40,9 @@ final class ServerSetupViewModel {
         !loading && !isServerFormOpen && !servers.isEmpty
     }
 
-    init(mode: ServerSetupMode, store: ServerConfigStore, service: ServerConfigService) {
+    init(mode: ServerSetupMode, store: ServerConfigStore) {
         self.mode = mode
         self.store = store
-        self.service = service
         self.servers = store.servers
         self.draftServer = Self.serverTemplate
     }
@@ -91,7 +89,7 @@ final class ServerSetupViewModel {
             return draftErrorMessage = Self.duplicateAddressError
         }
 
-        let reachable = await service.isReachable(server: draftServer)
+        let reachable = await store.isReachable(draftServer)
 
         if !reachable {
             return draftErrorMessage = Self.serverUnreachableError

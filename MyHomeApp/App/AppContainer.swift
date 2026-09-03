@@ -49,7 +49,7 @@ final class AppContainer {
         let scenarioService = HubScenarioService(client: apiClient)
 
         let sessionStore = SessionStore(service: authService, tokenPersistence: tokenPersistence)
-        let serverConfigStore = ServerConfigStore(persistence: serverConfigPersistence)
+        let serverConfigStore = ServerConfigStore(persistence: serverConfigPersistence, service: serverConfigService)
         let registrationStore = RegistrationStore(
             service: registrationService,
             persistence: registrationPersistence
@@ -81,8 +81,8 @@ final class AppContainer {
         LoginViewModel(sessionStore: sessionStore)
     }
 
-    func buildRegisterViewModel(email: String) -> RegisterViewModel {
-        RegisterViewModel(sessionStore: sessionStore, email: email)
+    func buildRegisterViewModel() -> RegisterViewModel {
+        RegisterViewModel(sessionStore: sessionStore, prefilledEmail: registrationStore.pendingRequest?.email ?? "")
     }
 
     func buildRegistrationRequestViewModel(email: String, comment: String) -> RegistrationRequestViewModel {
@@ -94,7 +94,7 @@ final class AppContainer {
     }
 
     func buildServerSetupViewModel(mode: ServerSetupMode) -> ServerSetupViewModel {
-        ServerSetupViewModel(mode: mode, store: serverConfigStore, service: serverConfigService)
+        ServerSetupViewModel(mode: mode, store: serverConfigStore)
     }
 
     func buildDevicesViewModel() -> DevicesViewModel {

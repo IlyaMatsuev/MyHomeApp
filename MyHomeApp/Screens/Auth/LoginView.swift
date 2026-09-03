@@ -1,8 +1,7 @@
 import SwiftUI
 
 struct LoginView: View {
-    @Environment(SessionStore.self) private var sessionStore
-    @Environment(RegistrationStore.self) private var registrationStore
+    @Environment(AppContainer.self) private var container
     @State private var viewModel: LoginViewModel?
     @State private var path: [Route] = []
 
@@ -20,7 +19,7 @@ struct LoginView: View {
                 if let viewModel {
                     LoginForm(
                         viewModel: viewModel,
-                        hasPendingRequest: registrationStore.hasPendingRequest,
+                        hasPendingRequest: container.registrationStore.hasPendingRequest,
                         onRequestAccess: { path.append(.newRegistrationRequest(email: "", comment: "")) },
                         onOpenRequest: { path.append(.registrationRequestStatus) }
                     )
@@ -47,40 +46,31 @@ struct LoginView: View {
                         onDismiss: { path.removeAll() },
                         onRegister: { path.append(.register) },
                         onResubmit: {
-                            let email = registrationStore.pendingRequest?.email ?? ""
-                            let comment = registrationStore.pendingRequest?.requesterComment ?? ""
+                            let email = container.registrationStore.pendingRequest?.email ?? ""
+                            let comment = container.registrationStore.pendingRequest?.requesterComment ?? ""
                             path.append(.newRegistrationRequest(email: email, comment: comment))
                         }
                     )
                 case .register:
                     RegisterView(onRegistered: {
-                        let email = registrationStore.pendingRequest?.email ?? ""
-                        registrationStore.clear()
+                        let email = container.registrationStore.pendingRequest?.email ?? ""
+                        container.registrationStore.clear()
                         path.removeAll()
                         viewModel?.email = email
                     })
                 }
             }
         }
-        .onAppear {
+        .task {
             if viewModel == nil {
-                viewModel = LoginViewModel(sessionStore: sessionStore)
+                viewModel = container.buildLoginViewModel()
             }
         }
     }
 }
 
 #Preview {
-    let sessionStore = SessionStore(service: MockAuthService(operationDelay: .zero), tokenPersistence: InMemoryAuthTokenPersistence())
-    let registrationStore = RegistrationStore(
-        service: MockRegistrationService(operationDelay: .zero),
-        persistence: InMemoryRegistrationPersistence()
-    )
     let server = Server(.http, "hub.local:8080", remote: false, label: "Home")
-    let serverStore = ServerConfigStore(persistence: InMemoryServerConfigPersistence(initial: [server]))
     return LoginView()
-        .environment(sessionStore)
-        .environment(registrationStore)
-        .environment(serverStore)
-        .task { await serverStore.load() }
+        .inject(AppContainer.preview().withServers([server]).build())
 }

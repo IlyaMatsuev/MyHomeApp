@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct RegistrationRequestView: View {
-    @Environment(RegistrationStore.self) private var registrationStore
+    @Environment(AppContainer.self) private var container
     @State private var viewModel: RegistrationRequestViewModel?
+
     var email: String = ""
     var comment: String = ""
     var onSubmitted: () -> Void
@@ -25,7 +26,7 @@ struct RegistrationRequestView: View {
         .onAppear {
             if viewModel == nil {
                 viewModel = RegistrationRequestViewModel(
-                    registrationStore: registrationStore,
+                    registrationStore: container.registrationStore,
                     email: email,
                     comment: comment
                 )
@@ -35,12 +36,8 @@ struct RegistrationRequestView: View {
 }
 
 #Preview {
-    let registrationStore = RegistrationStore(
-        service: MockRegistrationService(operationDelay: .zero),
-        persistence: InMemoryRegistrationPersistence()
-    )
-    return NavigationStack {
+    NavigationStack {
         RegistrationRequestView(onSubmitted: {}, onAlreadyApproved: {})
-            .environment(registrationStore)
+            .inject(AppContainer.preview().build())
     }
 }

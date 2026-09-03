@@ -17,6 +17,7 @@ final class ServerConfigStore {
     private(set) var selectedServer: Server?
 
     private let persistence: ServerConfigPersistence
+    private let service: ServerConfigService
 
     var servers: [Server] {
         if case .configured(let servers) = state {
@@ -25,8 +26,13 @@ final class ServerConfigStore {
         return []
     }
 
-    init(persistence: ServerConfigPersistence) {
+    init(persistence: ServerConfigPersistence, service: ServerConfigService) {
         self.persistence = persistence
+        self.service = service
+    }
+
+    func isReachable(_ server: Server) async -> Bool {
+        await service.isReachable(server: server)
     }
 
     func load() async {

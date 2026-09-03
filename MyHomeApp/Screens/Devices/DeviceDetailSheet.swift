@@ -105,5 +105,5 @@ struct DeviceDetailSheet: View {
             onDeleted: { _ in }
         )
     )
-    .environment(SavedColorsStore(persistence: InMemorySavedColorsPersistence()))
+    .inject(AppContainer.preview().build())
 }

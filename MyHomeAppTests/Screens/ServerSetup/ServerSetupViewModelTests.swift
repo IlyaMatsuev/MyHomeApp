@@ -14,8 +14,8 @@ struct ServerSetupViewModelTests {
 
     init() {
         persistence = StubServerConfigPersistence()
-        store = ServerConfigStore(persistence: persistence)
         service = StubServerConfigService()
+        store = ServerConfigStore(persistence: persistence, service: service)
         viewModel = ServerSetupViewModel(mode: .initialSetup, store: store, service: service)
     }
 

@@ -9,7 +9,7 @@ final class RegisterViewModel {
     private(set) var loading = false
     private(set) var errorMessage: String?
 
-    var email: String {
+    var email: String = "" {
         didSet { errorMessage = nil }
     }
     var password: String = "" {
@@ -39,9 +39,9 @@ final class RegisterViewModel {
         !loading && isEmailValid && !password.isEmpty && passwordsMatch
     }
 
-    init(sessionStore: SessionStore, email: String = "") {
+    init(sessionStore: SessionStore, prefilledEmail: String = "") {
         self.sessionStore = sessionStore
-        self.email = email
+        self.email = prefilledEmail
     }
 
     @discardableResult
