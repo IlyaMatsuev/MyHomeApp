@@ -101,6 +101,20 @@ final class AppContainer {
         DevicesViewModel(service: deviceService, toastStore: toastStore)
     }
 
+    func buildDeviceDetailsViewModel(
+        device: Device,
+        onChanged: @escaping @MainActor (Device) -> Void,
+        onDeleted: @escaping @MainActor (String) -> Void
+    ) -> DeviceDetailViewModel {
+        DeviceDetailViewModel(
+            device: device,
+            service: deviceService,
+            toastStore: toastStore,
+            onChanged: onChanged,
+            onDeleted: onDeleted,
+        )
+    }
+
     func buildScenariosViewModel() -> ScenariosViewModel {
         ScenariosViewModel(service: scenarioService, deviceService: deviceService, toastStore: toastStore)
     }

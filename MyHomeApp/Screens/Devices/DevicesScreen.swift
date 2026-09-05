@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct DevicesScreen: View {
+    @State private var router = DevicesRouter()
     @Bindable var viewModel: DevicesViewModel
 
     var body: some View {
@@ -11,7 +12,9 @@ struct DevicesScreen: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) { ServerSwitcherMenu() }
                 }
-                .sheet(item: $viewModel.detail) { DeviceDetailSheet(viewModel: $0) }
+                .sheet(item: $router.destination) { destination in
+                    DevicesDestinationView(destination: destination, viewModel: viewModel, router: router)
+                }
         }
     }
 
@@ -39,9 +42,12 @@ struct DevicesScreen: View {
             } else {
                 VStack(spacing: 0) {
                     DeviceRoomFilterList(availableRooms: viewModel.availableRooms, selection: $viewModel.selectedRoom)
-                    DeviceList(roomGroups: viewModel.visibleRoomGroups)
-                        .environment(viewModel)
-                        .refreshable { await viewModel.refresh() }
+                    DeviceList(
+                        roomGroups: viewModel.visibleRoomGroups,
+                        viewModel: viewModel,
+                        onOpenDetails: router.openDetails
+                    )
+                    .refreshable { await viewModel.refresh() }
                 }
             }
         }

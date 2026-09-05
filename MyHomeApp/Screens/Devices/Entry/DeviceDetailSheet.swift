@@ -1,109 +1,41 @@
 import SwiftUI
 
-/// Everything one device can do, built from the config the hub ships for it.
+@MainActor
 struct DeviceDetailSheet: View {
-    @Bindable var viewModel: DeviceDetailViewModel
+    let device: Device
+    let onChanged: @MainActor (Device) -> Void
+    let onDeleted: @MainActor (String) -> Void
 
-    @Environment(\.dismiss) private var dismiss
+    @Environment(AppContainer.self) private var container
+    @State private var viewModel: DeviceDetailViewModel?
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color("BackgroundPrimary").ignoresSafeArea()
-                content
-            }
-            .navigationTitle(viewModel.device.name)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { toolbarContent }
-            .confirmationDialog(
-                "Delete this device?",
-                isPresented: $viewModel.isConfirmingDeletion,
-                titleVisibility: .visible
-            ) {
-                Button("Delete \"\(viewModel.device.name)\"", role: .destructive) {
-                    Task { await viewModel.confirmDeletion() }
-                }
-                Button("Cancel", role: .cancel) {
-                    viewModel.cancelDeletion()
-                }
-            } message: {
-                Text("The hub forgets it entirely. Scenarios that use it stop working.")
-            }
-        }
-    }
-
-    private var content: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                DeviceDetailsForm(viewModel: viewModel)
-
-                if !viewModel.controlItems.isEmpty {
-                    DeviceControlsSection(viewModel: viewModel)
-                }
-
-                if !viewModel.commandItems.isEmpty {
-                    DeviceCommandsSection(viewModel: viewModel)
-                }
-
-                if !viewModel.measurementItems.isEmpty {
-                    DeviceMeasurementsSection(device: viewModel.device)
-                }
-
-                deleteButton
-            }
-            .padding(20)
-        }
-        .scrollDismissesKeyboard(.interactively)
-    }
-
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .cancellationAction) {
-            Button("Done") { dismiss() }
-                .disabled(viewModel.isBusy)
-        }
-        ToolbarItem(placement: .confirmationAction) {
-            if viewModel.isSavingDetails {
-                ProgressView()
+        Group {
+            if let viewModel {
+                DeviceDetailScreen(viewModel: viewModel)
             } else {
-                Button("Save") {
-                    Task { await viewModel.saveDetails() }
+                ZStack {
+                    Color("BackgroundPrimary").ignoresSafeArea()
+                    ProgressView()
                 }
-                .disabled(!viewModel.canSaveDetails)
-                .opacity(viewModel.canSaveDetails ? 1 : 0.5)
             }
         }
-    }
-
-    private var deleteButton: some View {
-        Button(role: .destructive) {
-            viewModel.requestDeletion()
-        } label: {
-            HStack(spacing: 8) {
-                if viewModel.isDeleting {
-                    ProgressView().controlSize(.small)
-                }
-                Label("Delete Device", systemImage: "trash")
-            }
-            .frame(maxWidth: .infinity)
+        .onAppear {
+            guard viewModel == nil else { return }
+            viewModel = container.buildDeviceDetailsViewModel(
+                device: device,
+                onChanged: onChanged,
+                onDeleted: onDeleted,
+            )
         }
-        .buttonStyle(.bordered)
-        .tint(Color("Danger"))
-        .disabled(viewModel.isBusy)
-        .padding(.top, 8)
     }
 }
 
 #Preview {
-    let device = MockDeviceService.allDevices[3]
-    return DeviceDetailSheet(
-        viewModel: DeviceDetailViewModel(
-            device: device,
-            service: MockDeviceService(operationDelay: .milliseconds(300)),
-            toastStore: ToastStore(),
-            onChanged: { _ in },
-            onDeleted: { _ in }
-        )
+    DeviceDetailSheet(
+        device: MockDeviceService.allDevices[3],
+        onChanged: { _ in },
+        onDeleted: { _ in }
     )
     .inject(AppContainer.preview().build())
 }
