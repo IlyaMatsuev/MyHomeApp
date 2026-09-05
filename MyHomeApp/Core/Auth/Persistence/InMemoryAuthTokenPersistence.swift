@@ -1,6 +1,6 @@
 import Foundation
 
-final class InMemoryTokenStore: TokenStore, @unchecked Sendable {
+final class InMemoryAuthTokenPersistence: AuthTokenPersistence, @unchecked Sendable {
     private let lock = NSLock()
     private var token: AuthToken?
 

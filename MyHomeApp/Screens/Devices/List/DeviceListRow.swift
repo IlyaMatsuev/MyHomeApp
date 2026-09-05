@@ -3,8 +3,8 @@ import AnyCodable
 
 struct DeviceListRow: View {
     let device: Device
-
-    @Environment(DevicesViewModel.self) private var viewModel
+    let viewModel: DevicesViewModel
+    let onOpenDetails: (Device) -> Void
 
     @State private var commandText = ""
 
@@ -42,7 +42,7 @@ struct DeviceListRow: View {
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture { viewModel.openDetail(device) }
+        .onTapGesture { onOpenDetails(device) }
     }
 
     // MARK: - Header

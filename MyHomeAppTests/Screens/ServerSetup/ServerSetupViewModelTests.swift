@@ -14,9 +14,9 @@ struct ServerSetupViewModelTests {
 
     init() {
         persistence = StubServerConfigPersistence()
-        store = ServerConfigStore(persistence: persistence)
         service = StubServerConfigService()
-        viewModel = ServerSetupViewModel(mode: .initialSetup, store: store, service: service)
+        store = ServerConfigStore(persistence: persistence, service: service)
+        viewModel = ServerSetupViewModel(mode: .initialSetup, store: store)
     }
 
     // MARK: - default state
@@ -45,7 +45,7 @@ struct ServerSetupViewModelTests {
         persistence.loadResult = .success(seeded)
         await store.load()
 
-        let viewModel = ServerSetupViewModel(mode: .initialSetup, store: store, service: service)
+        let viewModel = ServerSetupViewModel(mode: .initialSetup, store: store)
 
         #expect(viewModel.servers == seeded)
     }
@@ -59,7 +59,7 @@ struct ServerSetupViewModelTests {
 
     @Test
     func initSetsEditModeWhenRequested() {
-        let editingViewModel = ServerSetupViewModel(mode: .edit, store: store, service: service)
+        let editingViewModel = ServerSetupViewModel(mode: .edit, store: store)
 
         #expect(editingViewModel.mode == .edit)
     }

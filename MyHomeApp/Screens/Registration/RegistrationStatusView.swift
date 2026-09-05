@@ -1,9 +1,10 @@
 import SwiftUI
 
 struct RegistrationStatusView: View {
-    @Environment(RegistrationStore.self) private var registrationStore
+    @Environment(AppContainer.self) private var container
     @State private var viewModel: RegistrationStatusViewModel?
     @State private var showCancelConfirmation = false
+
     var onDismiss: () -> Void
     var onRegister: () -> Void
     var onResubmit: () -> Void
@@ -45,7 +46,7 @@ struct RegistrationStatusView: View {
         }
         .task {
             if viewModel == nil {
-                viewModel = RegistrationStatusViewModel(registrationStore: registrationStore)
+                viewModel = container.buildRegistrationStatusViewModel()
             }
             await viewModel?.refresh()
         }
@@ -212,16 +213,16 @@ private func registrationStatusPreview(status: RegistrationRequestStatus) -> som
         role: .resident,
         blocked: status == .rejected
     )
-    let registrationStore = RegistrationStore(
-        service: MockRegistrationService(operationDelay: .zero, status: status),
-        persistence: InMemoryRegistrationPersistence(initial: request)
-    )
+    let registrationService = MockRegistrationService(operationDelay: .zero, status: status)
     let server = Server(.http, "hub.local:8080", remote: false, label: "Home")
-    let serverStore = ServerConfigStore(persistence: InMemoryServerConfigPersistence(initial: [server]))
+    let container = AppContainer.preview()
+        .setRegistrationService(registrationService)
+        .withRegistrationRequest(request)
+        .withServers([server])
+        .build()
+
     return NavigationStack {
         RegistrationStatusView(onDismiss: {}, onRegister: {}, onResubmit: {})
-            .environment(registrationStore)
-            .environment(serverStore)
+            .inject(container)
     }
-    .task { await serverStore.load() }
 }

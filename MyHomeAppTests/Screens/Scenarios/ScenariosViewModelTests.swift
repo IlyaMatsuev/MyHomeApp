@@ -52,16 +52,17 @@ struct ScenariosViewModelTests {
         #expect(service.fetchScenariosCallCount == 1)
     }
 
+    /// An initial load has no content to keep, so the failure is shown inline and *not* also
+    /// duplicated as a toast.
     @Test
-    func loadWhenServiceFailsSetsFailedStateAndShowsAToast() async throws {
+    func loadWhenServiceFailsSetsFailedStateWithoutAToast() async {
         service.setScenariosError(SampleError())
 
         await viewModel.load()
 
         #expect(viewModel.state == .failed(ScenarioError.generic))
         #expect(viewModel.scenarios.isEmpty)
-        let toast = try #require(toastStore.current)
-        #expect(toast.kind == .error)
+        #expect(toastStore.current == nil)
     }
 
     @Test

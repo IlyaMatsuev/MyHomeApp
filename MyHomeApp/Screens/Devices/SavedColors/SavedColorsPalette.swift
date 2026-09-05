@@ -1,9 +1,6 @@
 import SwiftUI
 
 /// The saved colours, shown under every colour field so one palette serves every device.
-///
-/// The circles wrap rather than scroll: a horizontal scroller inside a scrolling sheet clips its
-/// last circle mid-shape and fights the sheet for the drag.
 struct SavedColorsPalette: View {
     @Environment(SavedColorsStore.self) private var store
 
@@ -103,13 +100,11 @@ struct SavedColorsPalette: View {
 }
 
 #Preview {
-    SavedColorsPalette(currentHex: "#B7D4FF") { _ in }
+    let colors = ["#FF7A45", "#4ADE80", "#B7D4FF", "#F43F5E", "#FACC15", "#8B5CF6", "#06B6D4", "#111827", "#EC4899"]
+        .map { SavedColor(hex: $0) }
+
+    SavedColorsPalette(currentHex: "#B7D4FF", onSelect: { _ in })
         .padding()
         .background(Color("BackgroundSecondary"))
-        .environment(SavedColorsStore(
-            persistence: InMemorySavedColorsPersistence(
-                initial: ["#FF7A45", "#4ADE80", "#B7D4FF", "#F43F5E", "#FACC15",
-                          "#8B5CF6", "#06B6D4", "#111827", "#EC4899"].map { SavedColor(hex: $0) }
-            )
-        ))
+        .inject(AppContainer.preview().withSavedColors(colors).build())
 }

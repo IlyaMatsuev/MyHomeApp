@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-final class KeychainTokenStore: TokenStore {
+final class KeychainAuthTokenPersistance: AuthTokenPersistence {
     private let service: String
     private let account: String
     private let keychainQuery: KeychainQuery
@@ -20,7 +20,7 @@ final class KeychainTokenStore: TokenStore {
         do {
             return try JSONDecoder().decode(AuthToken.self, from: data)
         } catch {
-            throw TokenStoreError.decoding(error)
+            throw AuthTokenPersistanceError.decoding(error)
         }
     }
 
@@ -29,7 +29,7 @@ final class KeychainTokenStore: TokenStore {
         do {
             data = try JSONEncoder().encode(token)
         } catch {
-            throw TokenStoreError.encoding(error)
+            throw AuthTokenPersistanceError.encoding(error)
         }
 
         try deleteKeychainItem()
@@ -49,21 +49,21 @@ final class KeychainTokenStore: TokenStore {
             guard let data = result as? Data else { return nil }
             return data
         case errSecItemNotFound: return nil
-        default: throw TokenStoreError.keychain(status: status)
+        default: throw AuthTokenPersistanceError.keychain(status: status)
         }
     }
 
     private func addKeychainItem(_ data: Data) throws {
         let status = SecItemAdd(keychainQuery.store(data), nil)
         if status != errSecSuccess {
-            throw TokenStoreError.keychain(status: status)
+            throw AuthTokenPersistanceError.keychain(status: status)
         }
     }
 
     private func deleteKeychainItem() throws {
         let status = SecItemDelete(keychainQuery.remove())
         if status != errSecSuccess && status != errSecItemNotFound {
-            throw TokenStoreError.keychain(status: status)
+            throw AuthTokenPersistanceError.keychain(status: status)
         }
     }
 

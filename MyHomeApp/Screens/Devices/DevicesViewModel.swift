@@ -31,9 +31,6 @@ final class DevicesViewModel {
 
     private(set) var loadingDeviceIds: Set<String> = []
 
-    /// The device sheet, or `nil` when no row is open.
-    var detail: DeviceDetailViewModel?
-
     /// The value each staged control had before the user touched it, so a failed update can be
     /// rolled back even after the slider has been dragged well past where the request started.
     private var rollbackValues: [ControlKey: AnyCodable?] = [:]
@@ -71,8 +68,7 @@ final class DevicesViewModel {
         do {
             try await fetchDevices()
         } catch {
-            state = .failed(error.localizedDescription)
-            toastStore.error(DeviceError.text(for: error))
+            state = .failed(DeviceError.text(for: error))
         }
     }
 
@@ -84,14 +80,6 @@ final class DevicesViewModel {
         }
     }
 
-    private func fetchDevices() async throws {
-        // TODO: Need to query all devices, or implement lazy loading or something
-        let devicesPage = try await service.fetchDevices()
-        roomGroups = Self.group(devicesPage.items)
-        rollbackValues = [:]
-        state = .loaded
-    }
-
     func isLoading(_ device: Device) -> Bool {
         loadingDeviceIds.contains(device.id)
     }
@@ -99,8 +87,6 @@ final class DevicesViewModel {
     func device(withId deviceId: String) -> Device? {
         roomGroups.lazy.compactMap { $0.devices.first { $0.id == deviceId } }.first
     }
-
-    // MARK: - Controls
 
     /// Writes a control locally without contacting the hub, so a slider stays smooth while dragging.
     func stageControl(_ deviceId: String, name: String, value: AnyCodable) {
@@ -134,25 +120,10 @@ final class DevicesViewModel {
         }
     }
 
-    /// Replaces one control of a device in the list, leaving its other controls alone.
-    private func writeControl(_ name: String, of device: Device, to value: AnyCodable?) {
-        var updated = device
-        var controls = updated.controls ?? [:]
-        if let value {
-            controls[name] = value
-        } else {
-            controls.removeValue(forKey: name)
-        }
-        updated.controls = controls
-        replaceDevice(updated)
-    }
-
     func setControl(_ deviceId: String, name: String, to value: AnyCodable) {
         stageControl(deviceId, name: name, value: value)
         Task { await commitControl(deviceId, name: name) }
     }
-
-    // MARK: - Commands
 
     func sendCommand(_ deviceId: String, name: String, value: AnyCodable, label: String) async {
         loadingDeviceIds.insert(deviceId)
@@ -167,30 +138,7 @@ final class DevicesViewModel {
         }
     }
 
-    // MARK: - Device sheet
-
-    func openDetail(_ device: Device) {
-        detail = DeviceDetailViewModel(
-            device: device,
-            service: service,
-            toastStore: toastStore,
-            onChanged: { [weak self] updated in
-                self?.replaceDevice(updated)
-            },
-            onDeleted: { [weak self] deviceId in
-                self?.removeDevice(withId: deviceId)
-                self?.closeDetail()
-            }
-        )
-    }
-
-    func closeDetail() {
-        detail = nil
-    }
-
-    // MARK: - Mutating the list
-
-    private func replaceDevice(_ device: Device) {
+    func replaceDevice(_ device: Device) {
         roomGroups = Self.group(
             roomGroups
                 .flatMap(\.devices)
@@ -198,7 +146,7 @@ final class DevicesViewModel {
         )
     }
 
-    private func removeDevice(withId deviceId: String) {
+    func removeDevice(withId deviceId: String) {
         roomGroups = Self.group(roomGroups.flatMap(\.devices).filter { $0.id != deviceId })
         rollbackValues = rollbackValues.filter { $0.key.deviceId != deviceId }
     }
@@ -208,5 +156,25 @@ final class DevicesViewModel {
         return grouped
             .map { DeviceRoomGroup(room: $0, devices: $1.sorted()) }
             .sorted(using: KeyPathComparator(\.room))
+    }
+
+    private func fetchDevices() async throws {
+        // TODO: Need to query all devices, or implement lazy loading or something
+        let devicesPage = try await service.fetchDevices()
+        roomGroups = Self.group(devicesPage.items)
+        rollbackValues = [:]
+        state = .loaded
+    }
+
+    private func writeControl(_ name: String, of device: Device, to value: AnyCodable?) {
+        var updated = device
+        var controls = updated.controls ?? [:]
+        if let value {
+            controls[name] = value
+        } else {
+            controls.removeValue(forKey: name)
+        }
+        updated.controls = controls
+        replaceDevice(updated)
     }
 }

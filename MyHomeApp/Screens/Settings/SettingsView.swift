@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @Environment(SessionStore.self) private var sessionStore
+    @Environment(AppContainer.self) private var container
 
     var body: some View {
         ZStack {
@@ -18,7 +18,7 @@ struct SettingsView: View {
 
     private var logoutButton: some View {
         Button(role: .destructive) {
-            sessionStore.logout()
+            container.sessionStore.logout()
         } label: {
             Text("Log out")
                 .font(.headline)
@@ -31,6 +31,5 @@ struct SettingsView: View {
 }
 
 #Preview {
-    let sessionStore = SessionStore(service: MockAuthService(), tokenStore: InMemoryTokenStore())
-    return SettingsView().environment(sessionStore)
+    SettingsView().inject(AppContainer.preview().build())
 }

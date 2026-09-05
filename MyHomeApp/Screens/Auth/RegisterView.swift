@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct RegisterView: View {
-    @Environment(SessionStore.self) private var sessionStore
-    @Environment(RegistrationStore.self) private var registrationStore
+    @Environment(AppContainer.self) private var container
     @State private var viewModel: RegisterViewModel?
-    var onRegistered: () -> Void
+
+    var onRegistered: () -> Void = {}
 
     var body: some View {
         ZStack {
@@ -18,17 +18,13 @@ struct RegisterView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if viewModel == nil {
-                viewModel = RegisterViewModel(
-                    sessionStore: sessionStore,
-                    email: registrationStore.pendingRequest?.email ?? ""
-                )
+                viewModel = container.buildRegisterViewModel()
             }
         }
     }
 }
 
 #Preview {
-    let sessionStore = SessionStore(service: MockAuthService(operationDelay: .zero), tokenStore: InMemoryTokenStore())
     let request = RegistrationRequest(
         externalId: "abc",
         email: "new@home.dev",
@@ -37,13 +33,8 @@ struct RegisterView: View {
         role: .resident,
         blocked: false
     )
-    let registrationStore = RegistrationStore(
-        service: MockRegistrationService(operationDelay: .zero, status: .approved),
-        persistence: InMemoryRegistrationPersistence(initial: request)
-    )
     return NavigationStack {
         RegisterView(onRegistered: {})
-            .environment(sessionStore)
-            .environment(registrationStore)
+            .inject(AppContainer.preview().withRegistrationRequest(request).build())
     }
 }
