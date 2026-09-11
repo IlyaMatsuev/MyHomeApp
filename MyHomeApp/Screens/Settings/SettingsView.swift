@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @Environment(AppContainer.self) private var container
+    @Environment(SessionStore.self) private var sessionStore
 
     var body: some View {
         ZStack {
@@ -18,7 +18,7 @@ struct SettingsView: View {
 
     private var logoutButton: some View {
         Button(role: .destructive) {
-            container.sessionStore.logout()
+            sessionStore.logout()
         } label: {
             Text("Log out")
                 .font(.headline)

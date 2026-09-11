@@ -1,5 +1,5 @@
 @MainActor
-class AppContainerPreviewBuilder {
+final class AppContainerPreviewBuilder {
     private var servers: [Server] = []
     private var savedColors: [SavedColor] = []
     private var registrationRequest: RegistrationRequest?
