@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ScenarioEditorSheet: View {
+struct ScenarioEditorScreen: View {
     @Bindable var viewModel: ScenarioEditorViewModel
 
     @Environment(\.dismiss) private var dismiss
@@ -290,7 +290,7 @@ struct ScenarioEditorSheet: View {
 }
 
 #Preview("Create") {
-    ScenarioEditorSheet(
+    ScenarioEditorScreen(
         viewModel: ScenarioEditorViewModel(
             mode: .create,
             draft: ScenarioDraft(),
@@ -298,14 +298,14 @@ struct ScenarioEditorSheet: View {
             knownGroups: ["living_room"],
             knownCommands: [],
             service: MockScenarioService(),
-            onSaved: { _ in }
+            onChanged: { _ in }
         )
     )
 }
 
 #Preview("Edit") {
     let scenario = MockScenarioService.allScenarios[0]
-    return ScenarioEditorSheet(
+    return ScenarioEditorScreen(
         viewModel: ScenarioEditorViewModel(
             mode: .edit(scenario.externalId),
             draft: ScenarioDraft(scenario: scenario),
@@ -313,7 +313,7 @@ struct ScenarioEditorSheet: View {
             knownGroups: [scenario.group].compactMap { $0 },
             knownCommands: [],
             service: MockScenarioService(),
-            onSaved: { _ in }
+            onChanged: { _ in }
         )
     )
 }

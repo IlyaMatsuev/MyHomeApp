@@ -1,6 +1,6 @@
 import Foundation
 
-enum TokenStoreError: LocalizedError {
+enum AuthTokenPersistanceError: LocalizedError {
     case keychain(status: OSStatus)
     case encoding(Error)
     case decoding(Error)

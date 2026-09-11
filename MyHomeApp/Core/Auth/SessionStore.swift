@@ -4,7 +4,7 @@ import os
 
 @Observable
 @MainActor
-final class SessionStore {
+final class SessionStore: AuthProvider {
     private static let logger = Logger(subsystem: "MyHomeApp", category: "SessionStore")
 
     enum State: Equatable {
@@ -16,7 +16,7 @@ final class SessionStore {
     private(set) var state: State = .loading
 
     private let service: AuthService
-    private let tokenStore: TokenStore
+    private let tokenPersistence: AuthTokenPersistence
 
     var session: AuthSession? {
         if case .authenticated(let session) = state {
@@ -29,14 +29,14 @@ final class SessionStore {
         session?.token
     }
 
-    init(service: AuthService, tokenStore: TokenStore) {
+    init(service: AuthService, tokenPersistence: AuthTokenPersistence) {
         self.service = service
-        self.tokenStore = tokenStore
+        self.tokenPersistence = tokenPersistence
     }
 
     func load() async {
         do {
-            if let token = try tokenStore.load() {
+            if let token = try tokenPersistence.load() {
                 state = .authenticated(AuthSession(token: token))
             } else {
                 state = .unauthenticated
@@ -49,7 +49,7 @@ final class SessionStore {
 
     func login(email: String, password: String) async throws {
         let token = try await service.login(email: email, password: password)
-        try tokenStore.save(token)
+        try tokenPersistence.save(token)
         state = .authenticated(AuthSession(token: token))
     }
 
@@ -59,25 +59,25 @@ final class SessionStore {
 
     func logout() {
         do {
-            try tokenStore.clear()
+            try tokenPersistence.clear()
         } catch {
             Self.logger.error("Failed to clear the session during logout: \(error.localizedDescription)")
         }
         state = .unauthenticated
     }
 
-    func refresh() async -> Bool {
+    func refreshToken() async -> Bool {
         do {
             guard let token = sessionToken else {
                 throw AuthError.sessionExpired
             }
             let newToken = try await service.loginRefresh(refreshToken: token.refreshToken)
-            try tokenStore.save(newToken)
+            try tokenPersistence.save(newToken)
             state = .authenticated(AuthSession(token: newToken))
             return true
         } catch AuthError.sessionExpired {
             Self.logger.error("Token refresh failed: session expired")
-            try? tokenStore.clear()
+            try? tokenPersistence.clear()
             state = .unauthenticated
             return false
         } catch {

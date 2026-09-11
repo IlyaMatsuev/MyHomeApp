@@ -1,73 +1,27 @@
 import SwiftUI
 
 struct DevicesView: View {
-    @State private var viewModel: DevicesViewModel
-
-    init(service: any DeviceService, toastStore: ToastStore) {
-        self._viewModel = State(initialValue: DevicesViewModel(service: service, toastStore: toastStore))
-    }
+    @Environment(AppContainer.self) private var container
+    @State private var viewModel: DevicesViewModel?
 
     var body: some View {
-        @Bindable var viewModel = viewModel
-
-        return NavigationStack {
-            content
-                .navigationTitle("Devices")
-                .background(Color("BackgroundPrimary").ignoresSafeArea())
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        ServerSwitcherMenu()
-                    }
-                }
-                .task {
-                    if viewModel.state == .idle {
-                        await viewModel.load()
-                    }
-                }
-                .sheet(item: $viewModel.detail) { detail in
-                    DeviceDetailSheet(viewModel: detail)
-                }
-        }
-    }
-
-    @ViewBuilder
-    private var content: some View {
-        switch viewModel.state {
-        case .idle, .loading:
-            ProgressView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-        case .failed(let message):
-            ContentUnavailableView(
-                "Couldn't load devices",
-                systemImage: "exclamationmark.triangle",
-                description: Text(message)
-            )
-
-        case .loaded:
-            if viewModel.roomGroups.isEmpty {
-                ContentUnavailableView(
-                    "No devices",
-                    systemImage: "dot.radiowaves.left.and.right",
-                    description: Text("Devices added to your hub will appear here.")
-                )
+        Group {
+            if let viewModel {
+                DevicesScreen(viewModel: viewModel)
             } else {
-                VStack(spacing: 0) {
-                    DeviceRoomFilterList(availableRooms: viewModel.availableRooms, selection: $viewModel.selectedRoom)
-                    DeviceList(roomGroups: viewModel.visibleRoomGroups)
-                        .environment(viewModel)
-                        .refreshable { await viewModel.refresh() }
-                }
+                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        }
+        .task {
+            guard viewModel == nil else { return }
+            let newViewModel = container.buildDevicesViewModel()
+            viewModel = newViewModel
+            await newViewModel.load()
         }
     }
 }
 
 #Preview {
     let server = Server(.http, "hub.local:8080", remote: false, label: "Home")
-    let store = ServerConfigStore(persistence: InMemoryServerConfigPersistence(initial: [server]))
-    return DevicesView(service: MockDeviceService(), toastStore: ToastStore())
-        .environment(store)
-        .environment(SavedColorsStore(persistence: InMemorySavedColorsPersistence()))
-        .task { await store.load() }
+    return DevicesView().inject(AppContainer.preview().withServers([server]).build())
 }

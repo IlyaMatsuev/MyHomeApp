@@ -5,11 +5,13 @@ import Testing
 @MainActor
 struct ServerConfigStoreTests {
     private let persistence: StubServerConfigPersistence
+    private let service: ServerConfigService
     private let store: ServerConfigStore
 
     init() {
         persistence = StubServerConfigPersistence()
-        store = ServerConfigStore(persistence: persistence)
+        service = StubServerConfigService()
+        store = ServerConfigStore(persistence: persistence, service: service)
     }
 
     // MARK: - init

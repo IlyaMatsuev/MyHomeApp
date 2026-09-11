@@ -1,7 +1,7 @@
 import Foundation
 @testable import MyHomeApp
 
-final class StubTokenStore: TokenStore, @unchecked Sendable {
+final class StubAuthTokenPersistence: AuthTokenPersistence, @unchecked Sendable {
     var loadResult: Result<AuthToken?, Error> = .success(nil)
 
     private(set) var savedTokens: [AuthToken] = []

@@ -52,15 +52,20 @@ Review code changes made by the Implementer to ensure they:
 - [ ] `View` is a `struct`, not a class
 - [ ] `body` is pure — no side effects, no network calls
 - [ ] Async work uses `.task` / `.refreshable`, not `.onAppear { Task { ... } }` for view-lifetime work
-- [ ] State property wrappers used correctly: `@State` for view-local, `@Binding` for parent-owned, `@Environment` for system, `@Bindable` / `@Observable` for view models
+- [ ] State property wrappers used correctly: `@State` for view-local, `@Binding` for parent-owned, `@Environment(Type.self)` for the container / stores, `@Bindable` for view models
 - [ ] No business logic inside the view — delegate to a ViewModel
+- [ ] Loader / Screen split: `FooView` / `FooSheet` holds `@State private var viewModel: FooViewModel?` and builds it from `AppContainer` once; `FooScreen` takes a non-optional `@Bindable var viewModel`
+- [ ] Only the loader reads `@Environment(AppContainer.self)`; no view takes a service; no custom `EnvironmentValues` `@Entry` keys
+- [ ] Router `Destination` cases carry ids / modes, never a constructed view model; the presented sheet builds its own
 - [ ] `#Preview` provided for screen-level views (optional for small components unless the canvas meaningfully aids iteration)
 
 **ViewModels**
 
 - [ ] `@Observable` (or `ObservableObject` in legacy code) used appropriately
 - [ ] Annotated `@MainActor` when it publishes UI state
-- [ ] Dependencies injected via initializer (no hidden singletons)
+- [ ] Dependencies injected via initializer — no defaults, no `.shared`; a matching `buildFooViewModel(...)` exists on `AppContainer`
+- [ ] Takes a Store *or* that feature's Service, never both; a Store exists only when its state outlives a screen
+- [ ] Error channel matches the action: initial load → `state = .failed` inline; refresh / in-place action → `toastStore.error`; sheet form save → inline `errorMessage`
 - [ ] Mutating state happens on the main actor
 
 ### 4. Concurrency
@@ -180,14 +185,33 @@ var body: some View {
 // ✅ Correct: Trigger in .task, render from view model
 .task { await viewModel.load() }
 
-// ❌ Wrong: Singleton dependency, untestable
+// ❌ Wrong: Singleton or default dependency, bypasses the container
 final class DevicesViewModel {
-    func load() async { try await DevicesService.shared.fetchAll() }
+    init(service: DeviceService = HubDeviceService.shared) { self.service = service }
 }
-// ✅ Correct: Inject the protocol
+// ✅ Correct: Inject the protocol, no default; AppContainer.buildDevicesViewModel() wires it
 final class DevicesViewModel {
-    init(service: DevicesServiceProtocol = DevicesService.shared) { self.service = service }
+    init(service: DeviceService, toastStore: ToastStore) { ... }
 }
+
+// ❌ Wrong: Screen builds its own dependencies / view takes a service
+struct DevicesScreen: View {
+    @State private var viewModel = DevicesViewModel(service: HubDeviceService(...), ...)
+}
+// ✅ Correct: Loader builds from the container, screen takes the view model
+struct DevicesView: View {
+    @Environment(AppContainer.self) private var container
+    @State private var viewModel: DevicesViewModel?
+    // .task { guard viewModel == nil else { return }; viewModel = container.buildDevicesViewModel() }
+}
+struct DevicesScreen: View {
+    @Bindable var viewModel: DevicesViewModel
+}
+
+// ❌ Wrong: Router carries a built view model
+enum Destination { case edit(DeviceDetailViewModel) }
+// ✅ Correct: Values only; the sheet builds its own view model
+enum Destination: Identifiable, Hashable { case edit(deviceId: String) }
 
 // ❌ Wrong: Updating @State / @Observable off the main actor
 Task.detached {

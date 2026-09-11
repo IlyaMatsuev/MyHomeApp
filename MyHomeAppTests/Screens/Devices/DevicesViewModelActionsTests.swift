@@ -180,54 +180,38 @@ struct DevicesViewModelActionsTests {
 
     // MARK: - Device sheet
 
-    @Test
-    func openingADeviceCreatesTheSheetViewModel() async {
-        let lamp = Device.fixture(name: "Lamp").inRoom(.livingRoom).build()
-        service.setDevices([lamp])
-        await viewModel.load()
-
-        viewModel.openDetail(lamp)
-
-        #expect(viewModel.detail?.device.id == lamp.id)
+    /// Mirrors how `DevicesDestinationView` wires the sheet back into the list.
+    private func detailViewModel(for device: Device) -> DeviceDetailViewModel {
+        DeviceDetailViewModel(
+            device: device,
+            service: service,
+            toastStore: toastStore,
+            onChanged: { [viewModel] updated in viewModel.replaceDevice(updated) },
+            onDeleted: { [viewModel] deviceId in viewModel.removeDevice(withId: deviceId) }
+        )
     }
 
     @Test
-    func closingTheSheetClearsIt() async {
-        let lamp = Device.fixture(name: "Lamp").inRoom(.livingRoom).build()
-        service.setDevices([lamp])
-        await viewModel.load()
-        viewModel.openDetail(lamp)
-
-        viewModel.closeDetail()
-
-        #expect(viewModel.detail == nil)
-    }
-
-    @Test
-    func deletingFromTheSheetRemovesTheRowAndClosesIt() async throws {
+    func deletingFromTheSheetRemovesTheRow() async {
         let lamp = Device.fixture(name: "Lamp").inRoom(.livingRoom).build()
         let speaker = Device.fixture(name: "Speaker").inRoom(.livingRoom).build()
         service.setDevices([lamp, speaker])
         await viewModel.load()
-        viewModel.openDetail(lamp)
 
-        let detail = try #require(viewModel.detail)
-        await detail.confirmDeletion()
+        await detailViewModel(for: lamp).confirmDeletion()
 
         #expect(viewModel.roomGroups.flatMap(\.devices).map(\.id) == [speaker.id])
-        #expect(viewModel.detail == nil)
     }
 
     @Test
-    func savingFromTheSheetMovesTheRowToItsNewRoom() async throws {
+    func savingFromTheSheetMovesTheRowToItsNewRoom() async {
         let lamp = Device.fixture(name: "Lamp").inRoom(.livingRoom).build()
         service.setDevices([lamp])
         let moved = Device.fixture(name: "Lamp").withId(lamp.id).inRoom(.office).build()
         service.updateDeviceResult = { _ in .success(moved) }
         await viewModel.load()
-        viewModel.openDetail(lamp)
 
-        let detail = try #require(viewModel.detail)
+        let detail = detailViewModel(for: lamp)
         detail.draft.name = "Desk lamp"
         await detail.saveDetails()
 

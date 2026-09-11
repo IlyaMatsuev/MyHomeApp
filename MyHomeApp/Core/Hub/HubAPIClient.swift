@@ -1,34 +1,15 @@
 import Foundation
 import os
 
-/// Providers are mutated only during app construction (see `MyHomeApp`),
-/// then read by request handling — hence `@unchecked Sendable`.
-final class HubAPIClient: MyHomeAPIClient, @unchecked Sendable {
+final class HubAPIClient: MyHomeAPIClient, Sendable {
     private static let logger = Logger(subsystem: "MyHomeApp", category: "HubAPIClient")
 
     private let session: URLSession
+    private let context: HubAPIContext
 
-    private var currentServer: @MainActor @Sendable () -> Server?
-    private var currentToken: @MainActor @Sendable () -> AuthToken?
-    private var refreshHandler: @MainActor @Sendable () async -> Bool
-
-    init(session: URLSession = .shared) {
+    init(context: HubAPIContext, session: URLSession = .shared) {
+        self.context = context
         self.session = session
-        self.currentServer = { nil }
-        self.currentToken = { nil }
-        self.refreshHandler = { false }
-    }
-
-    func setServerProvider(_ provider: @escaping @MainActor @Sendable () -> Server?) {
-        currentServer = provider
-    }
-
-    func setTokenProvider(_ provider: @escaping @MainActor @Sendable () -> AuthToken?) {
-        currentToken = provider
-    }
-
-    func setRefreshHandler(_ handler: @escaping @MainActor @Sendable () async -> Bool) {
-        refreshHandler = handler
     }
 
     func send<T: Decodable & Sendable>(_ request: HubRequest) async throws -> T {
@@ -55,7 +36,7 @@ final class HubAPIClient: MyHomeAPIClient, @unchecked Sendable {
     }
 
     private func resolveCurrentServer() async throws -> Server {
-        guard let server = await currentServer() else {
+        guard let server = await context.currentServer else {
             throw HubAPIError.noServerSelected
         }
         return server
@@ -66,7 +47,7 @@ final class HubAPIClient: MyHomeAPIClient, @unchecked Sendable {
             return try await performOnce(request, server: server)
         } catch HubAPIError.unauthorized where request.protected {
             Self.logger.log("Received 401 on protected request - attempting refresh")
-            if await refreshHandler() {
+            if await context.refreshToken() {
                 return try await performOnce(request, server: server)
             }
             throw HubAPIError.unauthorized
@@ -112,7 +93,7 @@ final class HubAPIClient: MyHomeAPIClient, @unchecked Sendable {
             urlRequest.httpBody = body
             urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
-        if request.protected, let token = await currentToken() {
+        if request.protected, let token = await context.currentToken {
             urlRequest.setValue("Bearer \(token.accessToken)", forHTTPHeaderField: "Authorization")
         }
         return urlRequest

@@ -41,7 +41,6 @@ final class ScenariosViewModel {
     private(set) var devices: [Device] = []
     private(set) var busyScenarioIds: Set<String> = []
 
-    var editor: ScenarioEditorViewModel?
     var scenarioPendingDeletion: Scenario?
 
     private let service: ScenarioService
@@ -115,8 +114,9 @@ final class ScenariosViewModel {
             scenarios = page.items.sorted()
             state = .loaded
         } catch {
-            toastStore.error(ScenarioError.text(for: error))
-            if !keepingContentOnFailure {
+            if keepingContentOnFailure {
+                toastStore.error(ScenarioError.text(for: error))
+            } else {
                 scenarios = []
                 state = .failed(ScenarioError.text(for: error))
             }
@@ -133,6 +133,10 @@ final class ScenariosViewModel {
 
     func isBusy(_ scenario: Scenario) -> Bool {
         busyScenarioIds.contains(scenario.id)
+    }
+
+    func scenario(withId scenarioId: String) -> Scenario? {
+        scenarios.first { $0.externalId == scenarioId }
     }
 
     // MARK: - Active toggle
@@ -188,35 +192,9 @@ final class ScenariosViewModel {
         busyScenarioIds.remove(scenario.id)
     }
 
-    // MARK: - Editing
+    // MARK: - List updates
 
-    func startCreating() {
-        editor = makeEditor(mode: .create, draft: ScenarioDraft())
-    }
-
-    func startEditing(_ scenario: Scenario) {
-        editor = makeEditor(mode: .edit(scenario.id), draft: ScenarioDraft(scenario: scenario))
-    }
-
-    func closeEditor() {
-        editor = nil
-    }
-
-    private func makeEditor(mode: ScenarioEditorViewModel.Mode, draft: ScenarioDraft) -> ScenarioEditorViewModel {
-        ScenarioEditorViewModel(
-            mode: mode,
-            draft: draft,
-            devices: devices,
-            knownGroups: knownGroups,
-            knownCommands: knownCommands,
-            service: service
-        ) { [weak self] saved in
-            self?.merge(saved)
-            self?.closeEditor()
-        }
-    }
-
-    private func merge(_ scenario: Scenario) {
+    func mergeScenario(_ scenario: Scenario) {
         if let index = scenarios.firstIndex(where: { $0.id == scenario.id }) {
             scenarios[index] = scenario
         } else {

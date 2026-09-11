@@ -5,7 +5,7 @@ import os
 
 @Observable
 @MainActor
-final class ScenarioEditorViewModel: Identifiable {
+final class ScenarioEditorViewModel {
     private static let logger = Logger(subsystem: "MyHomeApp", category: "ScenarioEditorViewModel")
 
     enum Mode: Hashable {
@@ -20,7 +20,6 @@ final class ScenarioEditorViewModel: Identifiable {
         }
     }
 
-    let id = UUID()
     let mode: Mode
     let devices: [Device]
     let knownCommands: [ScenarioKnownCommand]
@@ -39,7 +38,7 @@ final class ScenarioEditorViewModel: Identifiable {
     private(set) var didAttemptSave = false
 
     private let service: ScenarioService
-    private let onSaved: @MainActor (Scenario) -> Void
+    private let onChanged: @MainActor (Scenario) -> Void
 
     var canSave: Bool { !loading && draft.isValid }
 
@@ -72,7 +71,7 @@ final class ScenarioEditorViewModel: Identifiable {
         knownGroups: [String],
         knownCommands: [ScenarioKnownCommand],
         service: ScenarioService,
-        onSaved: @escaping @MainActor (Scenario) -> Void
+        onChanged: @escaping @MainActor (Scenario) -> Void
     ) {
         self.mode = mode
         self.draft = draft
@@ -80,7 +79,7 @@ final class ScenarioEditorViewModel: Identifiable {
         self.knownGroups = knownGroups
         self.knownCommands = knownCommands
         self.service = service
-        self.onSaved = onSaved
+        self.onChanged = onChanged
     }
 
     // MARK: - Field validation
@@ -221,7 +220,7 @@ final class ScenarioEditorViewModel: Identifiable {
 
         do {
             let saved = try await persist(draft.payload)
-            onSaved(saved)
+            onChanged(saved)
         } catch {
             errorMessage = ScenarioError.text(for: error)
             Self.logger.error("Failed to save a scenario: \(error.localizedDescription)")

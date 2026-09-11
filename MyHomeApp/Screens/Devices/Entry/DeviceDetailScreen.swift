@@ -1,9 +1,7 @@
 import SwiftUI
 
-/// Everything one device can do, built from the config the hub ships for it.
-struct DeviceDetailSheet: View {
+struct DeviceDetailScreen: View {
     @Bindable var viewModel: DeviceDetailViewModel
-
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -92,18 +90,4 @@ struct DeviceDetailSheet: View {
         .disabled(viewModel.isBusy)
         .padding(.top, 8)
     }
-}
-
-#Preview {
-    let device = MockDeviceService.allDevices[3]
-    return DeviceDetailSheet(
-        viewModel: DeviceDetailViewModel(
-            device: device,
-            service: MockDeviceService(operationDelay: .milliseconds(300)),
-            toastStore: ToastStore(),
-            onChanged: { _ in },
-            onDeleted: { _ in }
-        )
-    )
-    .environment(SavedColorsStore(persistence: InMemorySavedColorsPersistence()))
 }

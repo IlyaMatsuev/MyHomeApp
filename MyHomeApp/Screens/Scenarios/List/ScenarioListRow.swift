@@ -2,8 +2,8 @@ import SwiftUI
 
 struct ScenarioListRow: View {
     let scenario: Scenario
-
-    @Environment(ScenariosViewModel.self) private var viewModel
+    let viewModel: ScenariosViewModel
+    let onEditScenario: (Scenario) -> Void
 
     var busy: Bool { viewModel.isBusy(scenario) }
 
@@ -33,7 +33,7 @@ struct ScenarioListRow: View {
             activeToggle
         }
         .contentShape(Rectangle())
-        .onTapGesture { viewModel.startEditing(scenario) }
+        .onTapGesture { onEditScenario(scenario) }
         .swipeActions(edge: .trailing) {
             // Not `role: .destructive`: that animates the row out on tap, before the
             // confirmation is answered. The row leaves only once the hub confirms the delete.

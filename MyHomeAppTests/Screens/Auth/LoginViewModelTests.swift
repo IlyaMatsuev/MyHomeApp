@@ -10,7 +10,7 @@ struct LoginViewModelTests {
 
     init() {
         service = StubAuthService()
-        store = SessionStore(service: service, tokenStore: StubTokenStore())
+        store = SessionStore(service: service, tokenPersistence: StubAuthTokenPersistence())
         viewModel = LoginViewModel(sessionStore: store)
     }
 

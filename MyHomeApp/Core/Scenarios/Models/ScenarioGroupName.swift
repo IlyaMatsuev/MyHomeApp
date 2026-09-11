@@ -1,3 +1,5 @@
+import Foundation
+
 /// Naming rules and display wording for a scenario's `group`.
 enum ScenarioGroupName {
     static let ungroupedLabel = "Ungrouped"

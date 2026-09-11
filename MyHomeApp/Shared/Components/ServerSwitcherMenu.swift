@@ -53,7 +53,6 @@ struct ServerSwitcherMenu: View {
 #Preview {
     let server1 = Server(.http, "hub.local:8080", remote: false, label: "Home")
     let server2 = Server(.https, "hub.remote.com", remote: true, label: "Remote Home")
-    let store = ServerConfigStore(persistence: InMemoryServerConfigPersistence(initial: [server1, server2]))
     return NavigationStack {
         Color("BackgroundPrimary").ignoresSafeArea()
             .toolbar {
@@ -61,7 +60,6 @@ struct ServerSwitcherMenu: View {
                     ServerSwitcherMenu()
                 }
             }
-            .task { await store.load() }
     }
-    .environment(store)
+    .inject(AppContainer.preview().withServers([server1, server2]).build())
 }

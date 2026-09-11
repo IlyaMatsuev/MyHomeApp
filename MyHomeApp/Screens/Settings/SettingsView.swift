@@ -31,6 +31,5 @@ struct SettingsView: View {
 }
 
 #Preview {
-    let sessionStore = SessionStore(service: MockAuthService(), tokenStore: InMemoryTokenStore())
-    return SettingsView().environment(sessionStore)
+    SettingsView().inject(AppContainer.preview().build())
 }
