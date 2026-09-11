@@ -10,10 +10,10 @@ struct DevicesScreen: View {
                 .navigationTitle("Devices")
                 .background(Color("BackgroundPrimary").ignoresSafeArea())
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) { ServerSwitcherMenu() }
+        ToolbarItem(placement: .topBarTrailing) { ServerSwitcherMenu() }
                 }
                 .sheet(item: $router.destination) { destination in
-                    DevicesDestinationView(destination: destination, viewModel: viewModel, router: router)
+                    DevicesDestinationView(router: router, destination: destination, viewModel: viewModel)
                 }
         }
     }

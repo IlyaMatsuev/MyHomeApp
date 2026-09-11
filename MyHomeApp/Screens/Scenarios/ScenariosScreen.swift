@@ -1,7 +1,7 @@
 import SwiftUI
 
-// TODO: Rename to "Scenarios" Screen
-struct ScenarioScreen: View {
+struct ScenariosScreen: View {
+    @State private var router = ScenariosRouter()
     @Bindable var viewModel: ScenariosViewModel
 
     var body: some View {
@@ -9,18 +9,15 @@ struct ScenarioScreen: View {
             VStack(spacing: 0) {
                 header
                 content
-                    .refreshable { await viewModel.refresh() }
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .background(Color("BackgroundPrimary").ignoresSafeArea())
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    ServerSwitcherMenu()
-                }
+                ToolbarItem(placement: .topBarTrailing) { ServerSwitcherMenu() }
             }
-            .sheet(item: $viewModel.editor) { editor in
-                ScenarioEditorSheet(viewModel: editor)
+            .sheet(item: $router.destination) {
+                ScenariosDestinationView(router: router, destination: $0, viewModel: viewModel)
             }
             .confirmationDialog(
                 "Delete this scenario?",
@@ -47,7 +44,7 @@ struct ScenarioScreen: View {
             Spacer()
 
             Button {
-                viewModel.startCreating()
+                router.createScenario()
             } label: {
                 Image(systemName: "plus")
                     .font(.title3.weight(.semibold))
@@ -82,8 +79,13 @@ struct ScenarioScreen: View {
             } else {
                 VStack(spacing: 0) {
                     FilterChipsBar(chips: groupChips, selection: $viewModel.selectedGroup)
-                    ScenarioList(sections: viewModel.visibleSections).environment(viewModel)
+                    ScenarioList(
+                        sections: viewModel.visibleSections,
+                        viewModel: viewModel,
+                        onEditScenario: router.editScenario
+                    )
                 }
+                .refreshable { await viewModel.refresh() }
             }
         }
     }
@@ -98,7 +100,7 @@ struct ScenarioScreen: View {
         } description: {
             Text("Scenarios react to a schedule or to your devices. Create one to get started.")
         } actions: {
-            Button("New Scenario") { viewModel.startCreating() }
+            Button("New Scenario") { router.createScenario() }
                 .buttonStyle(.borderedProminent)
                 .tint(Color("AccentPrimary"))
         }

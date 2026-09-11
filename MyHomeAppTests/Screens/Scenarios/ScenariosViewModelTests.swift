@@ -215,71 +215,43 @@ struct ScenariosViewModelTests {
         #expect(viewModel.scenarios.isEmpty)
     }
 
-    // MARK: - editor presentation
+    // MARK: - knownCommands
 
     @Test
-    func startCreatingOpensAnEmptyEditor() async throws {
-        deviceService.setDevices([Device.fixture(name: "Lamp").build()])
-        await viewModel.load()
-
-        viewModel.startCreating()
-
-        let editor = try #require(viewModel.editor)
-        #expect(editor.mode == .create)
-        #expect(editor.draft.name.isEmpty)
-        #expect(editor.devices.count == 1, "The editor needs the devices for its pickers")
-    }
-
-    @Test
-    func startCreatingOffersTheCommandMatchesOtherScenariosUse() async throws {
+    func knownCommandsOfferTheCommandMatchesOtherScenariosUse() async {
         service.setScenarios([
             Scenario.fixture(name: "Warm light on")
                 .withDeviceCommand(deviceId: "device-1", value: "up_press")
                 .build()
         ])
+
         await viewModel.load()
 
-        viewModel.startCreating()
-
-        let editor = try #require(viewModel.editor)
         #expect(
-            editor.knownCommands == [
+            viewModel.knownCommands == [
                 ScenarioKnownCommand(deviceId: "device-1", name: "action", value: "up_press")
             ]
         )
     }
 
-    @Test
-    func startEditingSeedsTheEditorFromTheScenario() async throws {
-        let scenario = Scenario.fixture(name: "Movie time")
-            .inGroup("living_room")
-            .withCron("0 20 * * *")
-            .withAction(deviceId: "device-1", value: true)
-            .build()
-        service.setScenarios([scenario])
-        await viewModel.load()
+    // MARK: - mergeScenario()
 
-        viewModel.startEditing(scenario)
-
-        let editor = try #require(viewModel.editor)
-        #expect(editor.mode == .edit(scenario.externalId))
-        #expect(editor.draft.name == "Movie time")
-        #expect(editor.draft.group == "Living Room")
-        #expect(editor.draft.sources.count == 1)
-        #expect(editor.draft.actions.count == 1)
+    /// The editor the destination view would build for this list: same inputs, and a save merges
+    /// straight back into the list.
+    private func editorViewModel(mode: ScenarioEditorViewModel.Mode, draft: ScenarioDraft) -> ScenarioEditorViewModel {
+        ScenarioEditorViewModel(
+            mode: mode,
+            draft: draft,
+            devices: viewModel.devices,
+            knownGroups: viewModel.knownGroups,
+            knownCommands: viewModel.knownCommands,
+            service: service,
+            onChanged: { [viewModel] saved in viewModel.mergeScenario(saved) }
+        )
     }
 
     @Test
-    func closeEditorDismissesTheSheet() {
-        viewModel.startCreating()
-
-        viewModel.closeEditor()
-
-        #expect(viewModel.editor == nil)
-    }
-
-    @Test
-    func savingAnEditedScenarioReplacesItInTheListAndClosesTheEditor() async throws {
+    func savingAnEditedScenarioReplacesItInTheList() async {
         let scenario = Scenario.fixture(name: "Movie time").inGroup("living_room").build()
         var renamed = Scenario.fixture(name: "Movie night").inGroup("living_room").build()
         renamed = Scenario(
@@ -295,33 +267,29 @@ struct ScenariosViewModelTests {
         service.setScenarios([scenario])
         service.updateScenarioResult = .success(renamed)
         await viewModel.load()
-        viewModel.startEditing(scenario)
 
-        let editor = try #require(viewModel.editor)
+        let editor = editorViewModel(mode: .edit(scenario.externalId), draft: ScenarioDraft(scenario: scenario))
         editor.draft.name = "Movie night"
         editor.draft.sources = [ScenarioSourceDraft(kind: .cron)]
         editor.draft.actions = [ScenarioActionDraft(deviceId: "device-1")]
         await editor.save()
 
         #expect(viewModel.scenarios.map(\.name) == ["Movie night"])
-        #expect(viewModel.editor == nil)
     }
 
     @Test
-    func savingANewScenarioAppendsItToTheList() async throws {
+    func savingANewScenarioAppendsItToTheList() async {
         let created = Scenario.fixture(name: "Away mode").inGroup("office").build()
         service.setScenarios([Scenario.fixture(name: "Movie time").build()])
         service.createScenarioResult = .success(created)
         await viewModel.load()
-        viewModel.startCreating()
 
-        let editor = try #require(viewModel.editor)
+        let editor = editorViewModel(mode: .create, draft: ScenarioDraft())
         editor.draft.name = "Away mode"
         editor.draft.sources = [ScenarioSourceDraft(kind: .cron)]
         editor.draft.actions = [ScenarioActionDraft(deviceId: "device-1")]
         await editor.save()
 
         #expect(viewModel.scenarios.map(\.name).sorted() == ["Away mode", "Movie time"])
-        #expect(viewModel.editor == nil)
     }
 }

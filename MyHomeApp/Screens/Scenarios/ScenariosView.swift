@@ -7,7 +7,7 @@ struct ScenariosView: View {
     var body: some View {
         Group {
             if let viewModel {
-                ScenarioScreen(viewModel: viewModel)
+                ScenariosScreen(viewModel: viewModel)
             } else {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             }

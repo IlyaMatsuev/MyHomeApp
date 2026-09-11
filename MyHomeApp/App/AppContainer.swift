@@ -115,6 +115,28 @@ final class AppContainer {
         )
     }
 
+    // The container only adds `scenarioService`; everything else is per-presentation state
+    // (which scenario, what the list currently offers) that has to come from the caller.
+    // swiftlint:disable:next function_parameter_count
+    func buildScenarioEditorViewModel(
+        mode: ScenarioEditorViewModel.Mode,
+        draft: ScenarioDraft,
+        devices: [Device],
+        knownGroups: [String],
+        knownCommands: [ScenarioKnownCommand],
+        onChanged: @MainActor @escaping (Scenario) -> Void,
+    ) -> ScenarioEditorViewModel {
+        ScenarioEditorViewModel(
+            mode: mode,
+            draft: draft,
+            devices: devices,
+            knownGroups: knownGroups,
+            knownCommands: knownCommands,
+            service: scenarioService,
+            onChanged: onChanged,
+        )
+    }
+
     func buildScenariosViewModel() -> ScenariosViewModel {
         ScenariosViewModel(service: scenarioService, deviceService: deviceService, toastStore: toastStore)
     }

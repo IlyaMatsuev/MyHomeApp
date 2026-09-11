@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct DevicesDestinationView: View {
+    let router: DevicesRouter
     let destination: DevicesRouter.Destination
     let viewModel: DevicesViewModel
-    let router: DevicesRouter
 
     var body: some View {
         switch destination {

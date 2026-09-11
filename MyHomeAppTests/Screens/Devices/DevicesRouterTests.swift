@@ -12,7 +12,7 @@ struct DevicesRouterTests {
     }
 
     @Test
-    func openingADeviceSetsTheDetailsDestination() {
+    func editingADeviceSetsTheEditDestination() {
         let lamp = Device.fixture(name: "Lamp").build()
 
         router.editDevice(lamp)
