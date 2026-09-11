@@ -12,8 +12,8 @@ struct HubAPIClientTests {
         let name: String
     }
 
-    private static let server = Server(.http, "hub.local:8080", label: "Test Hub")
-    private static let token = AuthToken.fixture(accessToken: "test-token")
+    private nonisolated static let server = Server(.http, "hub.local:8080", label: "Test Hub")
+    private nonisolated static let token = AuthToken.fixture(accessToken: "test-token")
 
     private static func makeClient(
         server: Server? = HubAPIClientTests.server,
