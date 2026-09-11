@@ -15,14 +15,14 @@ struct DevicesRouterTests {
     func openingADeviceSetsTheDetailsDestination() {
         let lamp = Device.fixture(name: "Lamp").build()
 
-        router.openDetails(lamp)
+        router.editDevice(lamp)
 
-        #expect(router.destination == .deviceDetails(deviceId: lamp.id))
+        #expect(router.destination == .edit(deviceId: lamp.id))
     }
 
     @Test
     func dismissingClearsTheDestination() {
-        router.openDetails(Device.fixture(name: "Lamp").build())
+        router.editDevice(Device.fixture(name: "Lamp").build())
 
         router.dismiss()
 

@@ -7,7 +7,7 @@ struct DevicesDestinationView: View {
 
     var body: some View {
         switch destination {
-        case .deviceDetails(let deviceId):
+        case .edit(let deviceId):
             if let device = viewModel.device(withId: deviceId) {
                 DeviceDetailSheet(
                     device: device,

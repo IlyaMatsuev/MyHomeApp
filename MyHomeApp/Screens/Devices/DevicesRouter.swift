@@ -4,19 +4,19 @@ import Observation
 @MainActor
 final class DevicesRouter {
     enum Destination: Identifiable, Hashable {
-        case deviceDetails(deviceId: String)
+        case edit(deviceId: String)
 
         var id: String {
             switch self {
-            case .deviceDetails(let deviceId): "deviceDetails-\(deviceId)"
+            case .edit(let deviceId): "edit-\(deviceId)"
             }
         }
     }
 
     var destination: Destination?
 
-    func openDetails(_ device: Device) {
-        destination = .deviceDetails(deviceId: device.id)
+    func editDevice(_ device: Device) {
+        destination = .edit(deviceId: device.id)
     }
 
     func dismiss() {

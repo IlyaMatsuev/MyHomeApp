@@ -4,7 +4,7 @@ import AnyCodable
 struct DeviceListRow: View {
     let device: Device
     let viewModel: DevicesViewModel
-    let onOpenDetails: (Device) -> Void
+    let onEditDevice: (Device) -> Void
 
     @State private var commandText = ""
 
@@ -42,7 +42,7 @@ struct DeviceListRow: View {
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture { onOpenDetails(device) }
+        .onTapGesture { onEditDevice(device) }
     }
 
     // MARK: - Header

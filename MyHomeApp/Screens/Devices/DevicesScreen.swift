@@ -45,7 +45,7 @@ struct DevicesScreen: View {
                     DeviceList(
                         roomGroups: viewModel.visibleRoomGroups,
                         viewModel: viewModel,
-                        onOpenDetails: router.openDetails
+                        onEditDevice: router.editDevice
                     )
                     .refreshable { await viewModel.refresh() }
                 }
