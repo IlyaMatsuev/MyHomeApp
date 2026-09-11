@@ -11,7 +11,7 @@ Concretely:
 - **Prefer well-maintained libraries over custom reimplementations of common UI/infra patterns** (toasts, popups, charts, image loading, keychain wrappers, etc.) — added via SPM. Custom code is for project-specific logic, not generic infrastructure. Pick libraries with active maintenance, a real user base, and a small API surface; avoid bringing in a framework when a 50-line helper would do.
 - **Reach for native SwiftUI patterns first** (`@Observable`, `@Environment`, `NavigationStack`, `.task`, view modifiers). Don't invent a parallel system when SwiftUI already has one.
 - **Design for the next contributor**, not just today's feature. Centralize cross-cutting concerns (auth state, error presentation, navigation root) so screens don't each reinvent them, but don't pre-build abstraction layers for needs that don't exist yet.
-- **Don't over-engineer.** Skip enterprise patterns (DI containers, repository-over-service-over-data-source stacks, custom reactive frameworks). Idiomatic SwiftUI is the bar; scalability comes from clean boundaries, not from layers.
+- **Don't over-engineer.** One hand-written composition root (`App/AppContainer.swift`) is the whole DI story — no DI framework, resolver, repository-over-service-over-data-source stacks, or custom reactive frameworks. Idiomatic SwiftUI is the bar; scalability comes from clean boundaries, not from layers.
 
 ## Toolchain & targets
 
@@ -33,35 +33,79 @@ Use iOS 26 APIs freely — including the Observation framework (`@Observable`), 
 
 ```
 MyHomeApp/
-├── MyHomeApp.swift         # @main entry point
+├── App/                             # Composition root
+│   ├── MyHomeApp.swift              #   @main — `AppContainer.live()` + `.inject(container)`
+│   ├── AppContainer.swift           #   Owns stores (public) + services (private); builds every ViewModel
+│   ├── AppContainerPreviewBuilder.swift  # `AppContainer.preview()...build()` — mock-backed container for #Preview
+│   ├── View+AppContainer.swift      #   `.inject(_:)` puts the container and each store into the environment
+│   └── RootView.swift               #   serverSetup / login / main, driven by store state
 ├── ContentView.swift                # Root TabView
 ├── Assets.xcassets/                 # Colors, images, app icon
-├── Core/                            # Models, networking, services (shared infra)
-├── Shared/                          # Reusable views, modifiers, extensions
+├── Core/                            # One folder per domain (Auth, Devices, Scenarios, ServerConfig,
+│   │                                #   Registration, Colors, Toast, Hub):
+│   ├── Foo/FooService.swift         #   protocol
+│   ├── Foo/HubFooService.swift      #   real impl over HubAPIClient
+│   ├── Foo/MockFooService.swift     #   in-memory impl for previews
+│   ├── Foo/FooStore.swift           #   only when state outlives a screen (see Architecture)
+│   ├── Foo/Models/                  #   wire models, errors, limits
+│   └── Foo/Persistence/             #   protocol + UserDefaults/Keychain + InMemory impls
+├── Shared/                          # Components/, Modifiers/, Extensions/
 └── Screens/                         # Feature screens
-    ├── Home/
-    ├── Devices/
-    ├── Scenarios/
-    └── Settings/
+    ├── Devices/                     #   FooView (loader), FooScreen, FooViewModel, FooRouter, FooDestinationView
+    │   ├── List/                    #     list, rows, filters
+    │   └── Entry/                   #     presented editor: FooSheet (loader), FooScreen, FooViewModel, FooDraft
+    ├── Scenarios/                   #   same shape (+ Entry/Actions, Entry/Triggers)
+    ├── Auth/  Registration/  ServerSetup/  Home/  Settings/
 
-MyHomeAppTests/                # Swift Testing unit tests
-├── Mocks/                           # Hand-rolled protocol mocks + fixtures
-└── ...                              # Mirrors Screens/Core layout
+MyHomeAppTests/                      # Swift Testing unit tests
+├── Mocks/                           # Stub services/persistence + `Foo.fixture()` builders
+└── Core/  Screens/  Shared/         # Mirrors the app layout
 
-MyHomeAppUITests/              # XCUITest UI tests (XCTest — Swift Testing
+MyHomeAppUITests/                    # XCUITest UI tests (XCTest — Swift Testing
                                      #   doesn't yet cover XCUIApplication,
                                      #   measure, or XCTAttachment)
 ```
 
-Feature-folder layout. Each `Screens/Foo/` folder owns `FooView.swift`, `FooViewModel.swift`, and feature-local models. Cross-feature code goes in `Core/` or `Shared/`.
+Feature-folder layout. Each `Screens/Foo/` folder owns its loader view, screen, view model, router and
+feature-local models; `List/` and `Entry/` split a list screen from its presented editor once the folder
+grows. Cross-feature code goes in `Core/` or `Shared/`.
 
 ## Architecture
 
-MVVM with SwiftUI:
+MVVM with SwiftUI, one composition root:
 
-- **Views** (`struct: View`) are dumb. No business logic in `body`. No network calls from `body`. Trigger async work via `.task { }`.
-- **ViewModels** are `@Observable` `@MainActor` classes that own state. Inject dependencies via initializer with sensible defaults (`init(service: FooServiceProtocol = FooService.shared)`).
-- **Services** expose a `protocol` + concrete implementation. Tests mock the protocol; production uses the concrete type.
+- **DI is `AppContainer` + `@Environment`, nothing else.** `AppContainer` (`@Observable @MainActor`) owns
+  the stores as public `let`s and the services as `private let`s, and exposes one `buildFooViewModel(...)`
+  per screen. `MyHomeApp` creates `AppContainer.live()`; `.inject(container)` puts the container and every
+  store into the environment. Views read them with `@Environment(AppContainer.self)` /
+  `@Environment(ToastStore.self)` only — no custom `EnvironmentValues` `@Entry` keys, no `.shared`
+  singletons, no default arguments on view-model inits. Views never take a service. Previews build a
+  mock-backed container: `FooView().inject(AppContainer.preview().withServers([...]).build())`.
+- **Loader / Screen split.** `FooView` (or `FooSheet` for a presented editor) is the loader: it holds
+  `@State private var viewModel: FooViewModel?`, builds it from the container in `.task` / `.onAppear`
+  (guarded by `viewModel == nil`), shows a `ProgressView` until then, and is the only view that knows about
+  the container. `FooScreen` takes a non-optional `@Bindable var viewModel: FooViewModel` and renders.
+  `Screens/Devices/DevicesView.swift` → `DevicesScreen.swift` is the reference.
+- **Views** (`struct: View`) are dumb. No business logic in `body`. No network calls from `body`. Trigger
+  async work via `.task { }`.
+- **ViewModels** are `@Observable` `@MainActor` classes that own screen state. Every dependency comes
+  through `init`, with no defaults; only `AppContainer` (and tests, with stubs) construct them.
+- **Services** are stateless: a `protocol` (`DeviceService`) + `HubDeviceService` for production +
+  `MockDeviceService` for previews. Tests use `Stub*` types from `MyHomeAppTests/Mocks/`.
+- **Stores** are `@Observable @MainActor` state that outlives a screen (`SessionStore`,
+  `ServerConfigStore`, `RegistrationStore`, `SavedColorsStore`, `ToastStore`). A feature gets a store
+  exactly when its state outlives a screen — not before. A store owns its service and persistence; a
+  view model receives the store *or* that feature's service, never both.
+- **Routers own destinations as values.** A screen with presentation gets `FooRouter` (`@Observable
+  @MainActor`) holding `var destination: Destination?`, where `enum Destination: Identifiable, Hashable`
+  carries ids / modes — never a constructed view model. `FooScreen` binds
+  `.sheet(item: $router.destination)` to `FooDestinationView`, which maps the case to a `BarSheet`; the
+  sheet builds its own view model from the container and reports back through `onChanged` / `onDeleted`
+  closures.
+- **Error channels.** Initial load failure → `state = .failed(message)`, rendered inline
+  (`ContentUnavailableView`) and nowhere else. Refresh or in-place action failure → `toastStore.error(...)`,
+  state untouched (and the optimistic write rolled back). Form save inside a sheet → an inline
+  `errorMessage` on the editor view model. Messages come from the domain's `FooError.text(for:)`.
 - **Models** are `struct`s. Use `Codable`/`Identifiable`/`Equatable`/`Hashable` as needed.
 - **Editors use a draft model.** When a screen edits a wire model that is immutable, enum-shaped, or keyed by
   something that isn't a stable list identity, add a `FooDraft` next to the screen: flat, `var`-based, rows
@@ -135,7 +179,7 @@ If `iPhone 13 mini` isn't available, check `xcrun simctl list devices available`
 - No force unwraps (`!`) or force casts (`as!`) except for compile-time constants (`URL(string: "...")!`).
 - No `print(...)` in production code — use `os.Logger`.
 - **Default actor isolation is `nonisolated`.** Mark `@MainActor` explicitly on Views, ViewModels, and anything that mutates UI state. Plain value types (model enums/structs) need no annotation.
-- No singletons inside view models — inject via init.
+- No singletons or default arguments in view-model inits — every dependency is injected; `AppContainer` is the only production caller.
 - Use the asset catalog for colors. Don't hardcode hex.
 - One primary type per file; file name matches the type.
 - Screen-level views get a `#Preview`. For small reusable components, add one only when the canvas would actually help iterate (e.g. multiple states shown side-by-side) — a lone capsule on a 6.7" canvas is noise.

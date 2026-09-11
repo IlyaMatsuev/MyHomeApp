@@ -13,8 +13,9 @@ When a feature needs generic UI infrastructure (toasts, popups, charts, image lo
 This is a **SwiftUI iOS app** using:
 
 - **Language**: Swift 5.0 (no Swift 6-only features like typed throws, `~Copyable`, or strict-concurrency-only constructs)
-- **UI**: SwiftUI; iOS Deployment Target **18.6** — iOS 17 / iOS 18 APIs are available
-- **State**: `@Observable` (Observation framework, iOS 17+) for new ViewModels; `@State` / `@Binding` / `@Environment` for view-local state
+- **UI**: SwiftUI; iOS Deployment Target **26.0** — use iOS 26 APIs freely, no `#available` checks
+- **State**: `@Observable` ViewModels, Stores and Routers; `@State` / `@Binding` for view-local state; `@Environment(Type.self)` for the container and stores
+- **DI**: `App/AppContainer.swift` is the single composition root — see [CLAUDE.md](../../CLAUDE.md#architecture) for the rules; the patterns below show the shape
 - **Concurrency**: `async`/`await`, `Task`, `@MainActor`, `actor`
 - **Networking**: `URLSession` with `async`/`await` (`data(from:)`, `data(for:)`)
 - **Testing**: Swift Testing for unit tests, XCUITest for UI tests (mocks in `MyHomeAppTests/Mocks/`)
@@ -59,20 +60,55 @@ This is a **SwiftUI iOS app** using:
 
 ## Project Patterns
 
-### View + ViewModel Pair
+### Loader View + Screen + ViewModel
+
+The loader (`FooView`, or `FooSheet` when presented) is the only view that touches `AppContainer`. It builds the view model once and hands it to the screen non-optionally.
 
 ```swift
 // Screens/Devices/DevicesView.swift
 import SwiftUI
 
 struct DevicesView: View {
-    @State private var viewModel = DevicesViewModel()
+    @Environment(AppContainer.self) private var container
+    @State private var viewModel: DevicesViewModel?
+
+    var body: some View {
+        Group {
+            if let viewModel {
+                DevicesScreen(viewModel: viewModel)
+            } else {
+                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .task {
+            guard viewModel == nil else { return }
+            let newViewModel = container.buildDevicesViewModel()
+            viewModel = newViewModel
+            await newViewModel.load()
+        }
+    }
+}
+
+#Preview {
+    DevicesView().inject(AppContainer.preview().build())
+}
+```
+
+```swift
+// Screens/Devices/DevicesScreen.swift
+import SwiftUI
+
+struct DevicesScreen: View {
+    @State private var router = DevicesRouter()
+    @Bindable var viewModel: DevicesViewModel
 
     var body: some View {
         NavigationStack {
             content
                 .navigationTitle("Devices")
-                .task { await viewModel.load() }
+                .sheet(item: $router.destination) { destination in
+                    DevicesDestinationView(router: router, destination: destination, viewModel: viewModel)
+                }
         }
     }
 
@@ -81,10 +117,11 @@ struct DevicesView: View {
         switch viewModel.state {
         case .idle, .loading:
             ProgressView()
-        case .loaded(let devices):
-            DevicesList(devices: devices)
         case .failed(let message):
-            ErrorView(message: message, retry: { Task { await viewModel.load() } })
+            ContentUnavailableView("Couldn't load devices", systemImage: "exclamationmark.triangle", description: Text(message))
+        case .loaded:
+            DeviceList(roomGroups: viewModel.visibleRoomGroups, viewModel: viewModel, onEditDevice: router.editDevice)
+                .refreshable { await viewModel.refresh() }
         }
     }
 }
@@ -98,63 +135,132 @@ import Observation
 @Observable
 @MainActor
 final class DevicesViewModel {
-    enum State {
+    enum LoadState: Equatable {
         case idle
         case loading
-        case loaded([Device])
+        case loaded
         case failed(String)
     }
 
-    private(set) var state: State = .idle
+    private(set) var state: LoadState = .idle
+    private(set) var roomGroups: [DeviceRoomGroup] = []
 
-    private let devicesService: DevicesServiceProtocol
+    private let service: DeviceService
+    private let toastStore: ToastStore
 
-    init(devicesService: DevicesServiceProtocol = DevicesService.shared) {
-        self.devicesService = devicesService
+    // No default arguments — AppContainer.buildDevicesViewModel() is the only production caller.
+    init(service: DeviceService, toastStore: ToastStore) {
+        self.service = service
+        self.toastStore = toastStore
     }
 
+    // Initial load failure is rendered inline through `state`.
     func load() async {
         state = .loading
         do {
-            let devices = try await devicesService.fetchAll()
-            state = .loaded(devices)
+            try await fetchDevices()
         } catch {
-            state = .failed(error.localizedDescription)
+            state = .failed(DeviceError.text(for: error))
+        }
+    }
+
+    // Refresh / action failure goes to the toast; `state` stays .loaded.
+    func refresh() async {
+        do {
+            try await fetchDevices()
+        } catch {
+            toastStore.error(DeviceError.text(for: error))
         }
     }
 }
 ```
 
-### Service Protocol + Implementation
+Wiring it up is one method on the container:
 
 ```swift
-// Core/Services/DevicesServiceProtocol.swift
-protocol DevicesServiceProtocol {
-    func fetchAll() async throws -> [Device]
-    func update(_ device: Device) async throws
+// App/AppContainer.swift
+func buildDevicesViewModel() -> DevicesViewModel {
+    DevicesViewModel(service: deviceService, toastStore: toastStore)
+}
+```
+
+A view model takes a **Store** when the feature's state outlives the screen (`SessionStore`, `ServerConfigStore`, …) and that feature's **Service** otherwise — never both. Views never take a service.
+
+### Router + Destination View
+
+Destinations are values. The presented sheet is itself a loader and builds its own view model.
+
+```swift
+// Screens/Devices/DevicesRouter.swift
+@Observable
+@MainActor
+final class DevicesRouter {
+    enum Destination: Identifiable, Hashable {
+        case edit(deviceId: String)
+
+        var id: String {
+            switch self {
+            case .edit(let deviceId): "edit-\(deviceId)"
+            }
+        }
+    }
+
+    var destination: Destination?
+
+    func editDevice(_ device: Device) { destination = .edit(deviceId: device.id) }
+    func dismiss() { destination = nil }
 }
 ```
 
 ```swift
-// Core/Services/DevicesService.swift
-final class DevicesService: DevicesServiceProtocol {
-    static let shared = DevicesService()
+// Screens/Devices/DevicesDestinationView.swift
+struct DevicesDestinationView: View {
+    let router: DevicesRouter
+    let destination: DevicesRouter.Destination
+    let viewModel: DevicesViewModel
 
-    private let httpClient: HTTPClient
-
-    init(httpClient: HTTPClient = .shared) {
-        self.httpClient = httpClient
-    }
-
-    func fetchAll() async throws -> [Device] {
-        try await httpClient.get("/devices")
-    }
-
-    func update(_ device: Device) async throws {
-        try await httpClient.put("/devices/\(device.id)", body: device)
+    var body: some View {
+        switch destination {
+        case .edit(let deviceId):
+            if let device = viewModel.device(withId: deviceId) {
+                DeviceDetailSheet(
+                    device: device,
+                    onChanged: { viewModel.replaceDevice($0) },
+                    onDeleted: { viewModel.removeDevice(withId: $0); router.dismiss() }
+                )
+            }
+        }
     }
 }
 ```
+
+### Service Protocol + Implementations
+
+```swift
+// Core/Devices/DeviceService.swift
+protocol DeviceService: Sendable {
+    func fetchDevices() async throws -> Page<Device>
+    func updateControls(deviceId: String, controls: [String: AnyCodable]) async throws -> Device
+}
+```
+
+```swift
+// Core/Devices/HubDeviceService.swift
+struct HubDeviceService: DeviceService {
+    private let client: MyHomeAPIClient
+
+    init(client: MyHomeAPIClient) {
+        self.client = client
+    }
+
+    func fetchDevices() async throws -> Page<Device> {
+        try await client.send(HubRequest.get("/devices", ["pageSize": "20"]))
+    }
+    // ...
+}
+```
+
+`MockDeviceService` (same folder) is the in-memory implementation previews use; tests use `StubDeviceService` from `MyHomeAppTests/Mocks/`. Neither has a `.shared`; `AppContainer.live()` / `AppContainerPreviewBuilder.build()` construct them.
 
 ### Model
 
@@ -204,7 +310,7 @@ Place in `Shared/Components/`. They should be pure SwiftUI views with no busines
 3. **One task at a time** — complete each task fully before moving on.
 4. **Mind concurrency** — annotate ViewModels with `@MainActor` when they publish UI state. Keep network work off the main actor where possible.
 5. **Handle errors** — surface them through `state` or `Result`, not by crashing. Never use `try!` in production code paths.
-6. **Avoid singletons** for things that need to be tested. Use a `.shared` only as a convenience default for production `init`.
+6. **No singletons, no default dependencies.** Every dependency arrives through `init`; add a `buildFooViewModel(...)` to `AppContainer` (and, if previews need canned state, a `with...` to `AppContainerPreviewBuilder`) instead of a `.shared` or a default argument.
 7. **Use the asset catalog** for colors and images (`Color("AccentColor")`, `Image("DeviceIcon")`). Don't hardcode hex.
 8. **Update previews** — screen-level views get a `#Preview`. For small reusable components, add one only when the canvas would meaningfully help iterate (e.g. multiple states or a realistic parent context shown together). Don't add a `#Preview` that just drops a single small component on a full-phone canvas — it's noise.
 
@@ -224,4 +330,4 @@ import Combine         // Only if Combine is genuinely needed; prefer async/awai
 - Add a `#Preview` for screen-level views; for small components only when it actually aids iteration (multiple states, realistic surrounding context).
 - Follow file naming conventions (`PascalCase.swift`).
 - Keep public surface minimal — default to `internal`; use `private` for helpers; `public` only when crossing a module boundary.
-- Ensure code compiles (`xcodebuild -scheme MyHomeApp -destination 'platform=iOS Simulator,name=iPhone 13 mini' build`) and SwiftLint is clean (`swiftlint` from repo root).
+- Ensure code compiles (`xcodebuild -scheme MyHomeApp -destination 'platform=iOS Simulator,name=iPhone 13 mini,OS=26.5' build`) and SwiftLint is clean (`swiftlint` from repo root).
