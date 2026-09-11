@@ -40,7 +40,8 @@ final class AppContainer {
         let registrationPersistence = UserDefaultsRegistrationPersistence()
         let savedColorsPersistence = UserDefaultsSavedColorsPersistence()
 
-        let apiClient = HubAPIClient()
+        let requestContext = HubAPIContext()
+        let apiClient = HubAPIClient(context: requestContext)
 
         let authService = HubAuthService(client: apiClient)
         let registrationService = HubRegistrationService(client: apiClient)
@@ -50,15 +51,13 @@ final class AppContainer {
 
         let sessionStore = SessionStore(service: authService, tokenPersistence: tokenPersistence)
         let serverConfigStore = ServerConfigStore(persistence: serverConfigPersistence, service: serverConfigService)
+        requestContext.attach(auth: sessionStore, servers: serverConfigStore)
+
         let registrationStore = RegistrationStore(
             service: registrationService,
             persistence: registrationPersistence
         )
         let savedColorsStore = SavedColorsStore(persistence: savedColorsPersistence)
-
-        apiClient.setServerProvider { serverConfigStore.selectedServer }
-        apiClient.setTokenProvider { sessionStore.sessionToken }
-        apiClient.setRefreshHandler { await sessionStore.refresh() }
 
         return AppContainer(
             sessionStore: sessionStore,

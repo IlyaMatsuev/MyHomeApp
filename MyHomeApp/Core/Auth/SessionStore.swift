@@ -4,7 +4,7 @@ import os
 
 @Observable
 @MainActor
-final class SessionStore {
+final class SessionStore: AuthProvider {
     private static let logger = Logger(subsystem: "MyHomeApp", category: "SessionStore")
 
     enum State: Equatable {
@@ -66,7 +66,7 @@ final class SessionStore {
         state = .unauthenticated
     }
 
-    func refresh() async -> Bool {
+    func refreshToken() async -> Bool {
         do {
             guard let token = sessionToken else {
                 throw AuthError.sessionExpired

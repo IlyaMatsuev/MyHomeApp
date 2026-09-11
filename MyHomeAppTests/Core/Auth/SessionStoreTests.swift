@@ -120,7 +120,7 @@ struct SessionStoreTests {
         await store.load()
         #expect(store.state == .unauthenticated)
 
-        let succeeded = await store.refresh()
+        let succeeded = await store.refreshToken()
 
         #expect(!succeeded)
         #expect(service.refreshCalls.isEmpty)
@@ -136,7 +136,7 @@ struct SessionStoreTests {
         let renewed = AuthToken.fixture(accessToken: "new-access", refreshToken: "new-refresh")
         service.refreshResult = .success(renewed)
 
-        let succeeded = await store.refresh()
+        let succeeded = await store.refreshToken()
 
         #expect(succeeded)
         #expect(service.refreshCalls == ["old-refresh"])
@@ -151,7 +151,7 @@ struct SessionStoreTests {
         await store.load()
         service.refreshResult = .failure(AuthError.sessionExpired)
 
-        let succeeded = await store.refresh()
+        let succeeded = await store.refreshToken()
 
         #expect(!succeeded)
         #expect(store.state == .unauthenticated)
@@ -165,7 +165,7 @@ struct SessionStoreTests {
         await store.load()
         service.refreshResult = .failure(AuthError.unexpected)
 
-        let succeeded = await store.refresh()
+        let succeeded = await store.refreshToken()
 
         #expect(!succeeded)
         #expect(store.state == .authenticated(AuthSession(token: original)))

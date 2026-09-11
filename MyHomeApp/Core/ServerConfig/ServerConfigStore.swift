@@ -4,7 +4,7 @@ import os
 
 @Observable
 @MainActor
-final class ServerConfigStore {
+final class ServerConfigStore: ServerProvider {
     private static let logger = Logger(subsystem: "MyHomeApp", category: "ServerConfigStore")
 
     enum State: Equatable {

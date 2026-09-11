@@ -5,6 +5,7 @@ import Testing
 // swiftlint:disable file_length
 
 @Suite(.serialized)
+@MainActor
 // swiftlint:disable:next type_body_length
 struct HubAPIClientTests {
     private struct SamplePayload: Codable, Equatable {
@@ -19,20 +20,29 @@ struct HubAPIClientTests {
         token: AuthToken? = HubAPIClientTests.token,
         handler: @escaping TestURLProtocol.Handler
     ) -> HubAPIClient {
-        let client = HubAPIClient(session: .testSession(handler: handler))
-        client.setServerProvider { server }
-        client.setTokenProvider { token }
-        return client
+        let context = HubAPIContext()
+        context.attach(auth: StubAuthProvider(sessionToken: token), servers: StubServerProvider(selectedServer: server))
+        return makeClient(context: context, handler: handler)
     }
 
-    private static func okResponse(for request: URLRequest, body: Data = Data()) -> (HTTPURLResponse, Data) {
+    private static func makeClient(
+        context: HubAPIContext,
+        handler: @escaping TestURLProtocol.Handler
+    ) -> HubAPIClient {
+        HubAPIClient(context: context, session: .testSession(handler: handler))
+    }
+
+    private nonisolated static func okResponse(
+        for request: URLRequest,
+        body: Data = Data()
+    ) -> (HTTPURLResponse, Data) {
         let url = request.url ?? URL(fileURLWithPath: "/")
         // swiftlint:disable:next force_unwrapping
         let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
         return (response, body)
     }
 
-    private static func response(
+    private nonisolated static func response(
         for request: URLRequest,
         status: Int,
         body: Data = Data()
@@ -260,11 +270,11 @@ struct HubAPIClientTests {
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer test-token")
     }
 
-    // MARK: - setServerProvider
+    // MARK: - request context — attach
 
     @Test
-    func sendThrowsNoServerSelectedBeforeServerProviderIsSet() async {
-        let client = HubAPIClient(session: .testSession(handler: { _ in (HTTPURLResponse(), Data()) }))
+    func sendThrowsNoServerSelectedBeforeContextIsAttached() async {
+        let client = Self.makeClient(context: HubAPIContext()) { _ in (HTTPURLResponse(), Data()) }
 
         await #expect(throws: HubAPIError.noServerSelected) {
             let _: SamplePayload = try await client.send(.get("/devices"))
@@ -272,117 +282,153 @@ struct HubAPIClientTests {
     }
 
     @Test
-    func setServerProviderReplacesServerUsedForSubsequentRequests() async throws {
+    func sendToServerOmitsBearerTokenBeforeContextIsAttached() async throws {
         let captured = CapturedRequest()
-        let client = HubAPIClient(session: .testSession(handler: { request in
+        let client = Self.makeClient(context: HubAPIContext()) { request in
             captured.value = request
             return Self.okResponse(for: request, body: try Self.encode(SamplePayload(name: "x")))
-        }))
+        }
 
-        client.setServerProvider { Server(.http, "first.host:8080", label: "First") }
+        let _: SamplePayload = try await client.send(.get("/devices"), to: Self.server)
+
+        let request = try #require(captured.value)
+        #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
+    }
+
+    @Test
+    func attachSuppliesServerAndTokenForSubsequentRequests() async throws {
+        let captured = CapturedRequest()
+        let context = HubAPIContext()
+        let client = Self.makeClient(context: context) { request in
+            captured.value = request
+            return Self.okResponse(for: request, body: try Self.encode(SamplePayload(name: "x")))
+        }
+
+        context.attach(
+            auth: StubAuthProvider(sessionToken: Self.token),
+            servers: StubServerProvider(selectedServer: Self.server)
+        )
+        let _: SamplePayload = try await client.send(.get("/devices"))
+
+        let request = try #require(captured.value)
+        #expect(request.url?.absoluteString == "http://hub.local:8080/devices")
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer test-token")
+    }
+
+    // MARK: - request context — live provider state
+
+    @Test
+    func selectedServerChangeIsUsedBySubsequentRequests() async throws {
+        let captured = CapturedRequest()
+        let servers = StubServerProvider(selectedServer: Server(.http, "first.host:8080", label: "First"))
+        let context = HubAPIContext()
+        context.attach(auth: StubAuthProvider(), servers: servers)
+        let client = Self.makeClient(context: context) { request in
+            captured.value = request
+            return Self.okResponse(for: request, body: try Self.encode(SamplePayload(name: "x")))
+        }
+
         let _: SamplePayload = try await client.send(.get("/devices"))
         #expect(try #require(captured.value).url?.absoluteString == "http://first.host:8080/devices")
 
-        client.setServerProvider { Server(.https, "second.host:9000", label: "Second") }
+        servers.selectedServer = Server(.https, "second.host:9000", label: "Second")
         let _: SamplePayload = try await client.send(.get("/devices"))
         #expect(try #require(captured.value).url?.absoluteString == "https://second.host:9000/devices")
     }
 
-    // MARK: - setTokenProvider
-
     @Test
-    func setTokenProviderReplacesTokenUsedForSubsequentRequests() async throws {
+    func sessionTokenChangeIsUsedBySubsequentRequests() async throws {
         let captured = CapturedRequest()
-        let client = HubAPIClient(session: .testSession(handler: { request in
+        let auth = StubAuthProvider()
+        let context = HubAPIContext()
+        context.attach(auth: auth, servers: StubServerProvider(selectedServer: Self.server))
+        let client = Self.makeClient(context: context) { request in
             captured.value = request
             return Self.okResponse(for: request, body: try Self.encode(SamplePayload(name: "x")))
-        }))
-        client.setServerProvider { Self.server }
+        }
 
         let _: SamplePayload = try await client.send(.get("/devices"))
         #expect(try #require(captured.value).value(forHTTPHeaderField: "Authorization") == nil)
 
-        client.setTokenProvider { AuthToken.fixture(accessToken: "later-token") }
+        auth.sessionToken = AuthToken.fixture(accessToken: "later-token")
         let _: SamplePayload = try await client.send(.get("/devices"))
         #expect(try #require(captured.value).value(forHTTPHeaderField: "Authorization") == "Bearer later-token")
     }
 
-    // MARK: - setRefreshHandler — 401 retry
+    // MARK: - refresh — 401 retry
 
     @Test
-    func protected401TriggersRefreshHandlerThenRetriesRequestOnce() async throws {
+    func protected401TriggersRefreshThenRetriesRequestOnce() async throws {
         let calls = RequestCounter()
-        let client = HubAPIClient(session: .testSession(handler: { request in
+        let auth = StubAuthProvider(sessionToken: Self.token) { true }
+        let context = HubAPIContext()
+        context.attach(auth: auth, servers: StubServerProvider(selectedServer: Self.server))
+        let client = Self.makeClient(context: context) { request in
             calls.append(request)
             if calls.count == 1 {
                 return Self.response(for: request, status: 401)
             }
             return Self.okResponse(for: request, body: try Self.encode(SamplePayload(name: "ok")))
-        }))
-        client.setServerProvider { Self.server }
-        client.setTokenProvider { Self.token }
-        client.setRefreshHandler { true }
+        }
 
         let result: SamplePayload = try await client.send(.get("/devices"))
 
         #expect(result == SamplePayload(name: "ok"))
         #expect(calls.count == 2)
+        #expect(auth.refreshCount == 1)
     }
 
     @Test
-    func protected401SurfacesUnauthorizedWhenRefreshHandlerReturnsFalse() async throws {
+    func protected401SurfacesUnauthorizedWhenRefreshReturnsFalse() async throws {
         let calls = RequestCounter()
-        let client = HubAPIClient(session: .testSession(handler: { request in
+        let auth = StubAuthProvider(sessionToken: Self.token) { false }
+        let context = HubAPIContext()
+        context.attach(auth: auth, servers: StubServerProvider(selectedServer: Self.server))
+        let client = Self.makeClient(context: context) { request in
             calls.append(request)
             return Self.response(for: request, status: 401)
-        }))
-        client.setServerProvider { Self.server }
-        client.setTokenProvider { Self.token }
-        client.setRefreshHandler { false }
+        }
 
         await #expect(throws: HubAPIError.unauthorized) {
             let _: SamplePayload = try await client.send(.get("/devices"))
         }
         #expect(calls.count == 1)
+        #expect(auth.refreshCount == 1)
     }
 
     @Test
-    func unprotected401DoesNotTriggerRefreshHandler() async {
-        let handlerCalled = ActorFlag()
-        let client = HubAPIClient(session: .testSession(handler: { request in
+    func unprotected401DoesNotTriggerRefresh() async {
+        let auth = StubAuthProvider(sessionToken: Self.token) { true }
+        let context = HubAPIContext()
+        context.attach(auth: auth, servers: StubServerProvider(selectedServer: Self.server))
+        let client = Self.makeClient(context: context) { request in
             Self.response(for: request, status: 401)
-        }))
-        client.setServerProvider { Self.server }
-        client.setTokenProvider { Self.token }
-        client.setRefreshHandler {
-            handlerCalled.set()
-            return true
         }
 
         await #expect(throws: HubAPIError.unauthorized) {
             let _: SamplePayload = try await client.send(.get("/auth/login", protected: false))
         }
-        #expect(!handlerCalled.value)
+        #expect(auth.refreshCount == 0)
     }
 
     @Test
     func retryAfterRefreshUsesNewBearerToken() async throws {
         let captured = CapturedRequest()
         let calls = RequestCounter()
-        let provider = TokenSwitcher(initial: AuthToken.fixture(accessToken: "old"))
-        let client = HubAPIClient(session: .testSession(handler: { request in
+        let auth = StubAuthProvider(sessionToken: AuthToken.fixture(accessToken: "old"))
+        auth.refreshHandler = { [unowned auth] in
+            auth.sessionToken = AuthToken.fixture(accessToken: "new")
+            return true
+        }
+        let context = HubAPIContext()
+        context.attach(auth: auth, servers: StubServerProvider(selectedServer: Self.server))
+        let client = Self.makeClient(context: context) { request in
             calls.append(request)
             captured.value = request
             if calls.count == 1 {
                 return Self.response(for: request, status: 401)
             }
             return Self.okResponse(for: request, body: try Self.encode(SamplePayload(name: "ok")))
-        }))
-        client.setServerProvider { Self.server }
-        client.setTokenProvider { provider.current }
-        client.setRefreshHandler {
-            provider.set(AuthToken.fixture(accessToken: "new"))
-            return true
         }
 
         let _: SamplePayload = try await client.send(.get("/devices"))
@@ -406,7 +452,7 @@ struct HubAPIClientTests {
 
     // MARK: - helpers
 
-    private static func encode<T: Encodable>(_ value: T) throws -> Data {
+    private nonisolated static func encode<T: Encodable>(_ value: T) throws -> Data {
         try JSONEncoder().encode(value)
     }
 }
@@ -418,18 +464,6 @@ private final class CapturedRequest: @unchecked Sendable {
 private final class RequestCounter: @unchecked Sendable {
     private(set) var count: Int = 0
     func append(_ request: URLRequest) { count += 1 }
-}
-
-private final class ActorFlag: @unchecked Sendable {
-    private(set) var value: Bool = false
-    func set() { value = true }
-}
-
-private final class TokenSwitcher: @unchecked Sendable {
-    private var token: AuthToken
-    init(initial: AuthToken) { token = initial }
-    var current: AuthToken? { token }
-    func set(_ next: AuthToken) { token = next }
 }
 
 private extension URLRequest {
