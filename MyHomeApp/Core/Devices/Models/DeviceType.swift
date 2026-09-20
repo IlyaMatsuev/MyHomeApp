@@ -6,6 +6,7 @@ enum DeviceType: String, Codable, Hashable, CaseIterable {
     case fans
     case motionSensor = "motion-sensor"
     case remote
+    case lock
 
     var label: String { metadata.label }
     var emoji: String { metadata.emoji }
@@ -21,6 +22,7 @@ extension DeviceType {
         case .fans: return ("Fans", "🪭")
         case .motionSensor: return ("Motion Sensor", "〰️")
         case .remote: return ("Remote", "🖱️")
+        case .lock: return ("Lock", "🔒")
         }
     }
 }
