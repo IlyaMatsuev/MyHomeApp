@@ -179,6 +179,20 @@ struct ServerConfigStoreTests {
     }
 
     @Test
+    func saveRefreshesSelectedServerEditedInPlace() async throws {
+        let first = Server(.http, "hub.local:8080", remote: false, label: "Home")
+        let second = Server(.https, "remote.example.com", remote: true, label: "Cottage")
+        try await store.save([first, second])
+        store.select(second)
+        var edited = second
+        edited.headers = [ServerHeader(name: "X-Proxy-Authorization", value: "token")]
+
+        try await store.save([first, edited])
+
+        #expect(store.selectedServer == edited)
+    }
+
+    @Test
     func saveResetsSelectionWhenRemoved() async throws {
         let first = Server(.http, "hub.local:8080", remote: false, label: "Home")
         let second = Server(.https, "remote.example.com", remote: true, label: "Cottage")

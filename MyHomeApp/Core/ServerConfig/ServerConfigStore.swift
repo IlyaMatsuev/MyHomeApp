@@ -58,9 +58,10 @@ final class ServerConfigStore: ServerProvider {
         } else {
             try persistence.save(servers)
             state = .configured(servers)
-            if selectedServer.map({ current in !servers.contains { $0.id == current.id } }) ?? true {
-                selectedServer = servers.first
-            }
+            // Re-read the selection from the new list: an edit that keeps the address can still change
+            // what requests need, such as the scheme or the custom headers.
+            let selectedId = selectedServer?.id
+            selectedServer = servers.first { $0.id == selectedId } ?? servers.first
         }
     }
 

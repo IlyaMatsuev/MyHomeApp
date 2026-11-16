@@ -178,6 +178,73 @@ struct HubAPIClientTests {
         #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
     }
 
+    // MARK: - custom server headers
+
+    @Test
+    func sendAttachesServerCustomHeadersAlongsideBearerToken() async throws {
+        let captured = CapturedRequest()
+        let server = Server(
+            .https,
+            "home.example.com",
+            label: "Remote",
+            headers: [ServerHeader(name: "X-Proxy-Authorization", value: "proxy-token")]
+        )
+        let client = Self.makeClient(server: server) { request in
+            captured.value = request
+            return Self.okResponse(for: request, body: try Self.encode(SamplePayload(name: "x")))
+        }
+
+        let _: SamplePayload = try await client.send(.get("/devices"))
+
+        let request = try #require(captured.value)
+        #expect(request.value(forHTTPHeaderField: "X-Proxy-Authorization") == "proxy-token")
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer test-token")
+    }
+
+    @Test
+    func sendToServerAttachesThatServersCustomHeaders() async throws {
+        let captured = CapturedRequest()
+        let client = Self.makeClient { request in
+            captured.value = request
+            return Self.okResponse(for: request, body: try Self.encode(SamplePayload(name: "x")))
+        }
+        let target = Server(
+            .https,
+            "home.example.com",
+            label: "Remote",
+            headers: [ServerHeader(name: "X-Proxy-Authorization", value: "proxy-token")]
+        )
+
+        let _: SamplePayload = try await client.send(.get("/info", protected: false), to: target)
+
+        let request = try #require(captured.value)
+        #expect(request.value(forHTTPHeaderField: "X-Proxy-Authorization") == "proxy-token")
+    }
+
+    @Test
+    func sendKeepsHubHeadersWhenCustomHeaderUsesTheSameName() async throws {
+        let captured = CapturedRequest()
+        let server = Server(
+            .http,
+            "hub.local:8080",
+            label: "Test Hub",
+            headers: [
+                ServerHeader(name: "Accept", value: "text/plain"),
+                ServerHeader(name: "Authorization", value: "Basic abc")
+            ]
+        )
+        let client = Self.makeClient(server: server) { request in
+            captured.value = request
+            return Self.okResponse(for: request, body: try Self.encode(SamplePayload(name: "x")))
+        }
+
+        let _: SamplePayload = try await client.send(.get("/devices"))
+
+        let request = try #require(captured.value)
+        #expect(request.value(forHTTPHeaderField: "Accept") == "application/json")
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer test-token")
+    }
+
     // MARK: - decoding
 
     @Test

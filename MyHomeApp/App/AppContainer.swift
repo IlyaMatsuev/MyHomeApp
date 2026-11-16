@@ -36,7 +36,10 @@ final class AppContainer {
 
     static func live() -> AppContainer {
         let tokenPersistence = KeychainAuthTokenPersistance()
-        let serverConfigPersistence = UserDefaultsServerConfigPersistence()
+        let serverConfigPersistence = KeychainServerConfigPersistence(
+            keychain: KeychainItem(service: "com.myhome", account: "servers"),
+            legacy: UserDefaultsServerConfigPersistence()
+        )
         let registrationPersistence = UserDefaultsRegistrationPersistence()
         let savedColorsPersistence = UserDefaultsSavedColorsPersistence()
 
