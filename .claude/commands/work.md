@@ -9,7 +9,7 @@ Take the request below through this project's development workflow.
 
 If the request above is empty, ask what to work on and stop.
 
-## 1. Triage first — pick a lane, don't run all five agents by reflex
+## 1. Triage first — pick a lane, don't run the whole chain by reflex
 
 Read the request and enough of the code it touches to size it. Then say in one line which lane you picked
 and why, and follow it. Scaling the workflow to the work is the point; a typo fix does not need an
@@ -43,9 +43,9 @@ keep going — don't wait for approval. I'll interrupt if I want to change cours
 
 `reviewer` reports findings; it does not fix them. For each round:
 
-1. Triage the findings yourself. Drop ones that contradict CLAUDE.md (iOS 27+ / Swift 6 suggestions,
-   `#available` checks, `ObservableObject`, "ask before adding a library", or flagging an established
-   project pattern as over-engineering).
+1. Triage the findings yourself. Drop ones that contradict
+   [CLAUDE.md § Skill conflicts](../../CLAUDE.md#skill-conflicts--resolved-once-here), and ones that flag
+   an established project pattern as over-engineering.
 2. Send the ones that stand to `implementer` as a fix list, with the reviewer's reasoning attached.
 3. Re-review **only the new diff**.
 
@@ -55,10 +55,9 @@ After two rounds, stop looping. Report whatever is still open and let me decide.
 
 - **Plan stays in the conversation.** Show the `architect` plan inline; don't write a plan file unless I
   ask for one.
-- **Build gate.** Before reporting done, run both and report the real result:
-  - `xcodebuild build -scheme MyHomeApp -destination 'platform=iOS Simulator,name=iPhone 13 mini,OS=26.5'`
-  - `swiftlint` from the repo root
-  Never claim success without a green run. If you cannot run a step, say so explicitly.
+- **Build gate.** Before reporting done, run the build and `swiftlint` from
+  [CLAUDE.md § Build & test](../../CLAUDE.md#build--test) and report the real result. Never claim success
+  without a green run. If you cannot run a step, say so explicitly.
 - **Test gate.** Run the **UnitTests** plan. Never the `AllTests` plan unless I ask for the UI tests.
 - **No commits.** Leave everything in the working tree and tell me what changed. I commit.
 

@@ -45,7 +45,7 @@ MyHomeApp/
 ├── Core/                            # One folder per domain (Auth, Devices, Scenarios, ServerConfig,
 │   │                                #   Registration, Colors, Toast, Hub):
 │   ├── Foo/FooService.swift         #   protocol
-│   ├── Foo/HubFooService.swift      #   real impl over HubAPIClient
+│   ├── Foo/HubFooService.swift      #   real impl over MyHomeAPIClient
 │   ├── Foo/MockFooService.swift     #   in-memory impl for previews
 │   ├── Foo/FooStore.swift           #   only when state outlives a screen (see Architecture)
 │   ├── Foo/Models/                  #   wire models, errors, limits
@@ -80,7 +80,9 @@ MVVM with SwiftUI, one composition root:
   per screen. `MyHomeApp` creates `AppContainer.live()`; `.inject(container)` puts the container and every
   store into the environment. Views read them with `@Environment(AppContainer.self)` /
   `@Environment(ToastStore.self)` only — no custom `EnvironmentValues` `@Entry` keys, no `.shared`
-  singletons, no default arguments on view-model inits. Views never take a service. Previews build a
+  singletons, no default *dependencies* on view-model inits (a default for a plain state seed —
+  `selectedRoom: DeviceRoomFilter = .all` — is fine; a default service or store is not). Views never
+  take a service. Previews build a
   mock-backed container: `FooView().inject(AppContainer.preview().withServers([...]).build())`.
 - **Loader / Screen split.** `FooView` (or `FooSheet` for a presented editor) is the loader: it holds
   `@State private var viewModel: FooViewModel?`, builds it from the container in `.task` / `.onAppear`
@@ -172,22 +174,28 @@ If `iPhone 13 mini` isn't available, check `xcrun simctl list devices available`
 
 ## Linting
 
-[SwiftLint](https://github.com/realm/SwiftLint) is configured via `.swiftlint.yaml` at the repo root. Run `swiftlint` before finishing any task that touched Swift files (see the build & test section — it's part of the mandatory pre-report checks).
+[SwiftLint](https://github.com/realm/SwiftLint) is configured via `.swiftlint.yaml` at the repo root. An
+SPM build-tool plugin runs it during every `xcodebuild build`, so the build already surfaces lint warnings
+inline — but run `swiftlint` from the repo root as its own step anyway, so you see the full result rather
+than whatever the build log happened to print (see Build & test — part of the mandatory pre-report checks).
 
 This one is enforced, not just asked for: [.claude/hooks/swiftlint-gate.sh](.claude/hooks/swiftlint-gate.sh)
 runs on the `Stop` hook (wired in [.claude/settings.json](.claude/settings.json)). If the working tree has
 Swift changes and `swiftlint` reports an error, the turn is blocked and the errors come back to be fixed.
-Warnings are reported but don't block, and a turn that touched no Swift files skips the check entirely. The
-build is *not* hooked — it's too slow for every turn, so that gate is still on you and the pre-report rule
-above.
+Warnings are reported but don't block, and a turn that touched no Swift files skips the check entirely.
+There is no equivalent *hook* for the build — too slow for every turn — so that gate is still on you and
+the pre-report rule above.
 
-## Coding rules (short list — see agent files for full version)
+## Coding rules
+
+The whole list, and the single home for it. The agent files add role-specific workflow, not their own copy
+of these rules — if you're about to restate one of them elsewhere, link here instead.
 
 - `struct`/`enum` over `class`. `let` over `var`.
 - No force unwraps (`!`) or force casts (`as!`) except for compile-time constants (`URL(string: "...")!`).
 - No `print(...)` in production code — use `os.Logger`.
 - **Default actor isolation is `nonisolated`.** Mark `@MainActor` explicitly on Views, ViewModels, and anything that mutates UI state. Plain value types (model enums/structs) need no annotation.
-- No singletons or default arguments in view-model inits — every dependency is injected; `AppContainer` is the only production caller.
+- No singletons or default *dependencies* in view-model inits — every dependency is injected; `AppContainer` is the only production caller. A default for a plain state seed is fine.
 - Use the asset catalog for colors. Don't hardcode hex.
 - One primary type per file; file name matches the type.
 - **Comment the why, never the what.** Code says what it does; a comment exists only when a reader can't
@@ -225,7 +233,8 @@ The `.claude/agents/` folder defines four subagents (YAML frontmatter, dispatcha
 - **Reviewer** — review the diff against project standards
 
 The chain is Architect → Implementer → Tester → Reviewer, looping back to Implementer for at most two
-rounds. See [.claude/agents/README.md](.claude/agents/README.md) for the handoff contracts.
+rounds. `/work` §2 owns the handoff contracts — what each dispatch prompt must carry, since subagents start
+cold. [.claude/agents/README.md](.claude/agents/README.md) is a short map of the four files.
 
 Slash commands live in `.claude/commands/`:
 
@@ -242,13 +251,28 @@ edited here):
 
 - **swiftui-pro** — SwiftUI review: deprecated API, data flow, navigation, accessibility, resizability
 - **swift-concurrency-pro** — async/await, actor isolation, cancellation review
-- **swift-architecture-skill** — architecture playbooks; this project is already MVVM, so its `references/mvvm.md` is the only relevant one
+- **swift-architecture-skill** — the MVVM playbook. Trimmed to MVVM: the other playbooks and the
+  selection guide were deleted, since the architecture decision here is settled.
 
-**This file wins on conflict.** These skills are written for a generic project and will sometimes disagree
-with the rules above — swiftui-pro assumes iOS 27 / Swift 6.4 and asks before adding libraries, where this
-project targets iOS 26 / Swift 5 and *prefers* maintained libraries; swift-architecture-skill will offer to
-re-pick an architecture that is already settled. Take their framework knowledge, keep this project's
-conventions.
+`ponytail` (the laziness / over-engineering pass) comes from the plugin enabled in
+[.claude/settings.json](.claude/settings.json), not from this folder.
+
+### Skill conflicts — resolved once, here
+
+**This file wins on conflict.** The vendored skills are written for a generic project. These five
+disagreements are known; apply the resolution and don't re-litigate them per agent, per review or per turn.
+This section is the authority — the agent files link here instead of keeping their own copies.
+
+| The skill says | This project | Why |
+| --- | --- | --- |
+| iOS 27 / Xcode 27.1 / Swift 6.4 (swiftui-pro); Swift 6.2 strict concurrency (swift-concurrency-pro) | iOS 26.0 / Swift 5.0 language mode | Take their deprecation and data-flow findings; ignore version advice above iOS 26 and Swift 6-only constructs (typed throws, `~Copyable`, `sending`). |
+| Add an `#available` check for a newer API | Never add one; delete any you find | The whole codebase builds against iOS 26.0. |
+| `ObservableObject` / `@StateObject` / `@EnvironmentObject` are an option | Observation only | There is no legacy path at this deployment target. |
+| "Don't introduce a third-party framework without asking" | *Prefer* a maintained SPM library for generic UI/infra | See Dependencies below. Still ask before a framework-sized dependency. |
+| "Do not suggest `@unchecked Sendable`" | Test mocks use `final class Stub…: Protocol, @unchecked Sendable` | Deliberate: tests serialize their own access, and the alternative (an actor) would make every stub call `await`. Production code follows the skill — no `@unchecked Sendable` there. |
+
+swift-architecture-skill will also offer to re-pick the architecture: it is settled (MVVM + `AppContainer` +
+loader/screen split + routers). Don't run a fit check, a selection guide or a "Deep Refactor Mode".
 
 ## Dependencies
 

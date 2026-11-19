@@ -2,11 +2,8 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Edit(.claude/agents/**)",
-      "Write(.claude/agents/**)",
       "Bash(xcodebuild:*)",
       "Bash(xcrun:*)",
-      "Bash(xcrun simctl:*)",
       "Bash(swift build:*)",
       "Bash(swift test:*)",
       "Bash(swift package:*)",
@@ -23,10 +20,10 @@
       "Bash(git stash list)",
       "Bash(git ls-files:*)",
       "Bash(git rev-parse:*)",
-      "Bash(ls *)",
-      "Bash(find *)",
-      "Bash(grep *)",
-      "Bash(rg *)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
       "Bash(plutil:*)",
       "Bash(open -a Simulator)",
       "WebSearch",
@@ -38,7 +35,8 @@
   "enabledPlugins": {
     "ios-simulator-skill@conorluddy": true,
     "ponytail@ponytail": true,
-    "superpowers@claude-plugins-official": true
+    "superpowers@claude-plugins-official": false,
+    "postman@claude-plugins-official": false
   },
   "extraKnownMarketplaces": {
     "ponytail": {

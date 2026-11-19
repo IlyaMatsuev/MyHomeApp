@@ -58,9 +58,10 @@ UI or architecture in a test file, and firing those sections here produces noise
 
 ## 4. Act on the review
 
-Fix what stands — test-side fixes only. Drop findings that contradict this project's conventions (Swift 6
-constructs, `#available`, XCTest style in the unit target) and say which you dropped. One round, then
-report; don't loop.
+Fix what stands — test-side fixes only. Drop findings that contradict
+[CLAUDE.md § Skill conflicts](../../CLAUDE.md#skill-conflicts--resolved-once-here) or the test conventions
+(XCTest style in the unit target, `@unchecked Sendable` on a mock) and say which you dropped. One round,
+then report; don't loop.
 
 ## 5. Report
 

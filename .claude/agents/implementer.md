@@ -28,28 +28,25 @@ When a feature needs generic UI infrastructure (toasts, popups, charts, image lo
   `@MainActor` isolation. Default actor isolation here is `nonisolated`, so isolation mistakes are easy and
   silent; `references/actors.md` and `references/cancellation.md` are the relevant ones.
 
-**Two conflicts to resolve in this project's favour:**
-
-- `swiftui-pro` assumes iOS 27 / Xcode 27.1 / Swift 6.4 and will suggest APIs and strict-concurrency
-  constructs this target cannot use. This project is **iOS 26.0 / Swift 5.0 language mode** — take its
-  deprecation and data-flow findings, ignore version advice above iOS 26, and never add an `#available`
-  check to satisfy it.
-- `swiftui-pro` says not to introduce third-party frameworks without asking. CLAUDE.md *prefers* a
-  maintained SPM library for generic infrastructure. CLAUDE.md wins.
+The known skill conflicts (iOS 27 / Swift 6.4 advice, `#available`, `ObservableObject`, the
+third-party-library stance, `@unchecked Sendable`) are resolved once in
+[CLAUDE.md § Skill conflicts](../../CLAUDE.md#skill-conflicts--resolved-once-here). Apply those
+resolutions; don't re-argue them here.
 
 ## Project Context
 
-This is a **SwiftUI iOS app** using:
+Toolchain, targets, architecture and coding rules are in [CLAUDE.md](../../CLAUDE.md) — read its
+**Toolchain & targets**, **Architecture** and **Coding rules** sections, don't look for a second copy
+here. Two implementation details it doesn't spell out: networking is `URLSession` with `async`/`await`
+(`data(from:)`, `data(for:)`), and view-local state is `@State` / `@Binding` while the container and
+stores come through `@Environment(Type.self)`.
 
-- **Language**: Swift 5.0 (no Swift 6-only features like typed throws, `~Copyable`, or strict-concurrency-only constructs)
-- **UI**: SwiftUI; iOS Deployment Target **26.0** — use iOS 26 APIs freely, no `#available` checks
-- **State**: `@Observable` ViewModels, Stores and Routers; `@State` / `@Binding` for view-local state; `@Environment(Type.self)` for the container and stores
-- **DI**: `App/AppContainer.swift` is the single composition root — see [CLAUDE.md](../../CLAUDE.md#architecture) for the rules; the patterns below show the shape
-- **Concurrency**: `async`/`await`, `Task`, `@MainActor`, `actor`
-- **Networking**: `URLSession` with `async`/`await` (`data(from:)`, `data(for:)`)
-- **Testing**: Swift Testing for unit tests, XCUITest for UI tests (mocks in `MyHomeAppTests/Mocks/`)
+What follows is the concrete shape of this project's patterns in code — the part a prose rule can't
+carry.
 
 ## Code Style Requirements
+
+Beyond CLAUDE.md's **Coding rules**:
 
 ### Formatting
 
@@ -85,24 +82,12 @@ This is a **SwiftUI iOS app** using:
 - ViewModel goes in a separate file when it has more than ~20 lines.
 - Use `@Bindable` (or `@Binding`) to thread observable state into child views — do not pass closures for every property.
 - Use `.task` for async work tied to view lifetime; it auto-cancels on disappear.
-- Prefer system colors and the asset catalog for colors. Don't hardcode hex.
 
 ### Comments
 
-Default to no comment. The code says what it does; a comment earns its place only when a reader can't see
-**why** it was written that way.
-
-- Comment-worthy: a hub quirk or API oddity you're working around, a non-obvious ordering or timing
-  constraint, a deliberate deviation from these conventions, a validation rule copied from the hub (say
-  where it came from), a shortcut with a known limit (`shortcut: <the limit>, <when to upgrade>`).
-- Not comment-worthy: anything the signature, the type or the name already says. No `// Fetch devices`
-  above `fetchDevices()`, no narration of the next few lines, no banner headers
-  (`// ===== Properties =====`), no commented-out code, no bare `// TODO`.
-- Keep it short — one line where one line does it, written as a statement. Drop filler: "This function is
-  responsible for", "Note that", "Simply", "In order to".
-- `///` doc comments are not mandatory for public API. Add one when the contract isn't obvious from the
-  name and types (units, a value range, ownership of a returned object, what throws); skip it otherwise.
-- `// MARK:` belongs in long mixed files and in test suites, not in a 40-line view.
+CLAUDE.md's **Comment the why, never the what** rule is the whole policy — follow it as written. The one
+thing worth repeating because it's easy to forget: a shortcut with a known limit *must* carry
+`shortcut: <the limit>, <when to upgrade>`.
 
 ## Project Patterns
 
@@ -194,7 +179,7 @@ final class DevicesViewModel {
     private let service: DeviceService
     private let toastStore: ToastStore
 
-    // No default arguments — AppContainer.buildDevicesViewModel() is the only production caller.
+    // No default dependencies — AppContainer.buildDevicesViewModel() is the only production caller.
     init(service: DeviceService, toastStore: ToastStore) {
         self.service = service
         self.toastStore = toastStore
@@ -311,7 +296,7 @@ struct HubDeviceService: DeviceService {
 ### Model
 
 ```swift
-// Core/Models/Device.swift
+// Core/Devices/Models/Device.swift
 struct Device: Identifiable, Codable, Equatable, Hashable {
     let id: UUID
     var name: String
@@ -356,24 +341,16 @@ Place in `Shared/Components/`. They should be pure SwiftUI views with no busines
 3. **One task at a time** — complete each task fully before moving on.
 4. **Mind concurrency** — annotate ViewModels with `@MainActor` when they publish UI state. Keep network work off the main actor where possible.
 5. **Handle errors** — surface them through `state` or `Result`, not by crashing. Never use `try!` in production code paths.
-6. **No singletons, no default dependencies.** Every dependency arrives through `init`; add a `buildFooViewModel(...)` to `AppContainer` (and, if previews need canned state, a `with...` to `AppContainerPreviewBuilder`) instead of a `.shared` or a default argument.
-7. **Use the asset catalog** for colors and images (`Color("AccentColor")`, `Image("DeviceIcon")`). Don't hardcode hex.
-8. **Update previews** — screen-level views get a `#Preview`. For small reusable components, add one only when the canvas would meaningfully help iterate (e.g. multiple states or a realistic parent context shown together). Don't add a `#Preview` that just drops a single small component on a full-phone canvas — it's noise.
-
-## Common Imports
-
-```swift
-import SwiftUI         // SwiftUI views
-import Foundation      // URL, Data, JSONDecoder, etc.
-import Observation     // @Observable
-import Combine         // Only if Combine is genuinely needed; prefer async/await
-```
+6. **Wire new dependencies through the container** — add a `buildFooViewModel(...)` to `AppContainer` and,
+   if previews need canned state, a `with...` to `AppContainerPreviewBuilder`. Never a `.shared` or a
+   default service argument (CLAUDE.md's DI rule).
+7. **Update previews and fixtures your change breaks** — the `#Preview` policy is in CLAUDE.md.
 
 ## Output Expectations
 
 - Write complete, working Swift code (no `TODO:` placeholders for required functionality).
 - Include all imports.
-- Add a `#Preview` for screen-level views; for small components only when it actually aids iteration (multiple states, realistic surrounding context).
-- Follow file naming conventions (`PascalCase.swift`).
-- Keep public surface minimal — default to `internal`; use `private` for helpers; `public` only when crossing a module boundary.
-- Ensure code compiles (`xcodebuild -scheme MyHomeApp -destination 'platform=iOS Simulator,name=iPhone 13 mini,OS=26.5' build`) and SwiftLint is clean (`swiftlint` from repo root).
+- Keep public surface minimal — default to `internal`; `private` for helpers; `public` only when crossing
+  a module boundary.
+- **Run the build and lint gate from [CLAUDE.md § Build & test](../../CLAUDE.md#build--test) before
+  reporting done, and report the real result.** Don't run the tests — that's the Tester's step.

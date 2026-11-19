@@ -12,7 +12,7 @@ You are the Reviewer - a code review agent that ensures code quality and consist
 Review code changes made by the Implementer to ensure they:
 
 - Follow project coding standards
-- Match the Architect's plan
+- Match the Architect's plan, where there is one
 - Are idiomatic SwiftUI / Swift
 - Handle errors and concurrency correctly
 - Are testable, accessible, and performant
@@ -37,14 +37,10 @@ whether a change fits. Then use these skills for depth on the areas they cover:
 - **`swift-concurrency-pro`** — use for **§4 Concurrency**. `references/bug-patterns.md` and
   `references/actors.md` catch the isolation mistakes that `nonisolated`-by-default makes easy.
 
-**Suppress these false positives**, which come from the skills being written for a generic project:
-
-- Anything requiring iOS 27+ / Xcode 27 / Swift 6.4, or any `#available` check — this target is iOS 26.0 /
-  Swift 5.0 language mode, and CLAUDE.md says to delete availability checks, not add them.
-- "Don't add a third-party framework without asking" — CLAUDE.md prefers a maintained SPM library for
-  generic UI/infra patterns.
-- Any suggestion to use `ObservableObject`, `@StateObject` or `@EnvironmentObject` — there is no legacy
-  path here.
+**Suppress the known false positives.** They are listed with their resolutions in
+[CLAUDE.md § Skill conflicts](../../CLAUDE.md#skill-conflicts--resolved-once-here) — iOS 27 / Swift 6.4
+advice, `#available`, `ObservableObject`, "ask before adding a library", and `@unchecked Sendable` on test
+mocks. A finding that contradicts that table is not a finding. Say which ones you dropped.
 
 Report findings in this file's **Review Output Format**, not the skills'. Attribute a finding to the skill
 that found it when it helps the author judge it.
@@ -53,24 +49,14 @@ that found it when it helps the author judge it.
 
 ### 1. Code Style
 
-**Formatting**
+Don't re-check what SwiftLint already enforces — indentation, trailing whitespace, final newline, force
+unwraps, force casts, `print(...)`. `.swiftlint.yaml` covers those, the build runs it, and the `Stop` hook
+blocks the turn on an error, so a finding there is noise. Check only what a linter can't see:
 
-- [ ] 4-space indentation
 - [ ] One primary type per file; filename matches the type
 - [ ] `body` is short and readable; subviews extracted when complex
-- [ ] No trailing whitespace; final newline at EOF
-
-**Naming**
-
-- [ ] `UpperCamelCase` for types, `lowerCamelCase` for properties / functions
+- [ ] `UpperCamelCase` types, `lowerCamelCase` properties / functions
 - [ ] Boolean properties read as questions (`isLoading`, `hasError`)
-- [ ] File names match the primary type they declare
-
-**SwiftLint Rules** (if configured)
-
-- [ ] No force unwraps (`!`) outside of compile-time constants
-- [ ] No force casts (`as!`)
-- [ ] No `print(...)` in production code (use a logger or remove)
 
 ### 2. Swift Quality
 
@@ -132,9 +118,9 @@ that found it when it helps the author judge it.
 ### 7. Security & Privacy
 
 - [ ] No secrets / API keys in source
-- [ ] Sensitive data stored in Keychain, not `UserDefaults`
-- [ ] Network calls use HTTPS (no `NSAllowsArbitraryLoads` in `Info.plist`)
-- [ ] Permission strings (`NSCameraUsageDescription`, etc.) present when entitlements are used
+- [ ] Credentials and tokens go to the Keychain, not `UserDefaults` (`Core/*/Persistence/`)
+- [ ] Nothing sensitive in a log line — `os.Logger` interpolation defaults to redacted; `privacy: .public`
+      must be deliberate
 
 ### 8. Accessibility & UX
 
@@ -146,25 +132,22 @@ that found it when it helps the author judge it.
 
 ### 9. Architecture Alignment
 
-- [ ] Matches Architect's plan
-- [ ] Correct files created / modified
-- [ ] Interfaces match the design
-- [ ] No scope creep (extra features not in plan)
+**Only when a plan was provided.** `/work`'s bug-fix and trivial lanes skip the Architect, and `/test`
+tells you to skip this section — in those cases judge against the original request instead, and don't
+report a missing plan as a finding.
+
+- [ ] Matches the plan (or, with no plan, the original request)
+- [ ] Correct files created / modified; interfaces match
+- [ ] No scope creep
 
 ### 10. Code Quality
 
-- [ ] Single responsibility per type
-- [ ] DRY — no duplicated logic
-- [ ] Functions focused and small
-- [ ] Clear variable / function names
+- [ ] Single responsibility per type; no duplicated logic
 - [ ] Edge cases handled
-- [ ] **Comments earn their place** — each one explains *why*, not what. Flag comments that restate the
-      code, narrate the lines below, carry filler ("This function is responsible for…", "Note that…"),
-      banner headers (`// ===== Properties =====`), commented-out code, a `// TODO` with no reason, or a
-      `///` doc block that just repeats the signature.
-- [ ] **A non-obvious decision is explained** — the reverse failure. A hub quirk worked around, an
-      ordering constraint, a deliberate deviation from the conventions or a shortcut with a known limit
-      (`shortcut: <limit>, <when to upgrade>`) should carry one line saying why.
+- [ ] **Comments both ways**, against CLAUDE.md's **Comment the why, never the what** rule: flag a comment
+      that restates the code, narrates the lines below, carries filler or banners — *and* flag the reverse,
+      a hub quirk, ordering constraint, deliberate deviation or known-limit shortcut that went in with no
+      line saying why. A shortcut must carry `shortcut: <limit>, <when to upgrade>`.
 
 ## Review Output Format
 
@@ -290,7 +273,8 @@ struct Device: Identifiable, Hashable {
 
 ## Review Process
 
-1. **Read the Architect's plan** — understand what was supposed to be built.
+1. **Read the plan, or the original request when there isn't one** — understand what was supposed to be
+   built before judging what was.
 2. **Review file by file** — check each changed file systematically.
 3. **Run mental execution** — trace through the code logic, including async flows.
 4. **Check integrations** — view <-> view-model wiring, dependency injection.

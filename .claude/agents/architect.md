@@ -20,15 +20,12 @@ Invoke these before writing the plan, in this order:
    any layer, option or flag nobody asked for. Name what you deliberately skipped in the plan's **Risks &
    Mitigations** table so the Implementer doesn't add it back.
 2. **`swift-architecture-skill`** — read `references/mvvm.md` for structure, state ownership, async and
-   testing detail when a feature's shape isn't obvious from the nearest existing screen.
+   testing detail when a feature's shape isn't obvious from the nearest existing screen. The repo's copy is
+   trimmed to MVVM; the architecture here is settled, so there is nothing to select.
 
-   This project's architecture is **already decided** (MVVM + `AppContainer` + loader/screen split + routers,
-   see Architecture Knowledge below). Do **not** run the skill's selection guide, fit check or
-   "Deep Refactor Mode", and do not propose MVI, TCA, Clean, VIPER, MVP or Reactive — that decision is not
-   open. Ignore its `ObservableObject` / iOS 16–17 branches; this project is iOS 26 and uses Observation.
-
-Where a skill and this file disagree, **this file and [CLAUDE.md](../../CLAUDE.md) win.** The skills are
-written for a generic project; your job is to plan for this one.
+Where a skill and this file disagree, **this file and [CLAUDE.md](../../CLAUDE.md) win.** The known
+conflicts are resolved once in
+[CLAUDE.md § Skill conflicts](../../CLAUDE.md#skill-conflicts--resolved-once-here) — apply those and move on.
 
 Ponytail's "smallest change" and CLAUDE.md's "consistency beats a smaller diff" resolve the same way:
 follow the established convention, and be lazy about inventing *new* structure, never about reusing the
@@ -36,63 +33,22 @@ existing structure.
 
 ## Project Context
 
-This is a **SwiftUI iOS app** that serves as the client for the MyHomeHub:
+The toolchain, folder layout, architecture and coding rules are in [CLAUDE.md](../../CLAUDE.md). Read its
+**Toolchain & targets**, **Project structure**, **Architecture** and **Coding rules** sections — they are
+the authority and there is no second copy here. [implementer.md](implementer.md#project-patterns) shows the
+same patterns as working code (loader/screen, router, service, draft); skim it when you need the exact
+shape you're planning toward.
 
-- Built with SwiftUI (declarative UI)
-- **iOS Deployment Target: 26.0** — use iOS 26 APIs freely (Observation `@Observable`, `NavigationStack`, `.scrollTargetBehavior`, and anything newer). Nothing needs an `if #available` check; don't plan one.
-- **Swift: 5.0** — no Swift 6 strict-concurrency features (no `~Copyable`, no `transferring`, no typed throws). `async`/`await`, `actor`, `@MainActor`, structured concurrency are all available.
-- Universal: iPhone + iPad
-- Communicates with the MyHomeHub backend over REST (and potentially WebSocket / MQTT in the future)
-- Uses Swift Testing for unit tests, XCTest for UI tests
+Two things that bear on planning specifically:
 
-## Architecture Knowledge
+- **Plan the `buildFooViewModel(...)` call on `AppContainer`**, not a new DI mechanism. No resolver, no
+  repository-over-service stack, no `.shared`, no default service arguments, no custom `EnvironmentValues`
+  `@Entry` keys.
+- **A store is for state that outlives a screen** — don't plan one before that's true. A view model takes
+  the store *or* that feature's service, never both.
 
-### Folder Structure
-
-```
-MyHomeApp/
-├── App/                         # Composition root
-│   ├── MyHomeApp.swift          #   @main — `AppContainer.live()` + `.inject(container)`
-│   ├── AppContainer.swift       #   Owns stores (public) + services (private); builds every ViewModel
-│   ├── AppContainerPreviewBuilder.swift  # `AppContainer.preview()...build()` for #Preview
-│   ├── View+AppContainer.swift  #   `.inject(_:)` puts container + stores in the environment
-│   └── RootView.swift           #   serverSetup / login / main, driven by store state
-├── ContentView.swift            # Root TabView
-├── Assets.xcassets/             # Colors, images, app icon
-├── Core/                        # One folder per domain (Auth, Devices, Scenarios, ServerConfig,
-│                                #   Registration, Colors, Toast, Hub): FooService protocol,
-│                                #   HubFooService, MockFooService, FooStore, Models/, Persistence/
-├── Shared/                      # Components/, Modifiers/, Extensions/
-└── Screens/                     # Feature screens
-    ├── Devices/                 #   FooView (loader), FooScreen, FooViewModel, FooRouter,
-    │   ├── List/                #     FooDestinationView; List/ holds list, rows, filters
-    │   └── Entry/               #     Entry/ holds the presented editor (FooSheet, FooDraft)
-    ├── Scenarios/               #   same shape (+ Entry/Actions, Entry/Triggers)
-    ├── Auth/  Registration/  ServerSetup/  Home/  Settings/
-
-MyHomeAppTests/            # Swift Testing unit tests (Mocks/ holds Stub* + Foo.fixture())
-MyHomeAppUITests/          # XCUITest UI tests
-```
-
-### Key Patterns
-
-1. **MVVM with SwiftUI**: Views are dumb and render `@Observable` `@MainActor` ViewModels. Business logic lives in ViewModels and services, never inside `View.body`. Use Observation — there is no `ObservableObject` fallback at this deployment target.
-2. **Feature-folder layout**: Each screen folder contains its loader view, screen, ViewModel, router and feature-specific models. Cross-feature code goes in `Core/` or `Shared/`.
-3. **DI is `AppContainer` + `@Environment`, nothing else**: `AppContainer` (`@Observable @MainActor`) owns stores as public `let`s and services as `private let`s, and exposes one `buildFooViewModel(...)` per screen. Plan that call, not a new DI mechanism — no resolver, no repository-over-service stacks, no `.shared`, no default arguments on ViewModel inits, no custom `EnvironmentValues` `@Entry` keys.
-4. **Loader / Screen split**: `FooView` (or `FooSheet` for a presented editor) builds the ViewModel from the container in `.task`/`.onAppear` and is the only view that knows about the container; `FooScreen` takes a non-optional `@Bindable var viewModel`. `Screens/Devices/DevicesView.swift` → `DevicesScreen.swift` is the reference.
-5. **Routers own destinations as values**: a screen with presentation gets `FooRouter` holding `var destination: Destination?`, where `enum Destination: Identifiable, Hashable` carries ids / modes — never a constructed view model.
-6. **Stores only when state outlives a screen**: `SessionStore`, `ServerConfigStore`, `RegistrationStore`, `SavedColorsStore`, `ToastStore`. A ViewModel receives the store *or* that feature's service, never both.
-7. **Error channels**: initial load failure → `state = .failed(message)` rendered inline; refresh / in-place action failure → `toastStore.error(...)` with the optimistic write rolled back; form save in a sheet → inline `errorMessage`. Messages come from `FooError.text(for:)`.
-8. **Protocol-oriented services**: each domain exposes a `protocol` (`DeviceService`); production uses `HubFooService` over `HubAPIClient`, previews use `MockFooService`, tests use `Stub*` from `MyHomeAppTests/Mocks/`.
-9. **Value types by default**: Prefer `struct` and `enum` for models. Use `class` (or `actor`) only when reference identity or shared mutable state is required. Editors that need a form model get a `FooDraft` next to the screen rather than bending the wire model.
-10. **Async/await**: All asynchronous work uses `async`/`await`. Avoid completion handlers in new code. Default actor isolation is `nonisolated`, so mark `@MainActor` explicitly on anything that mutates UI state.
-
-### Naming & Layout Conventions
-
-- File names: `PascalCase.swift` matching the primary type they declare (e.g. `DevicesView.swift`, `DevicesViewModel.swift`).
-- One primary type per file. Small supporting types may live in the same file.
-- ViewModels live next to their View: `Screens/Devices/DevicesView.swift` + `Screens/Devices/DevicesViewModel.swift`.
-- Models specific to a feature live under that feature; shared models live in `Core/Models/`.
+Feature-local models live under that feature (`Core/Devices/Models/`, or next to the screen for a
+`FooDraft`). There is no `Core/Models/` folder.
 
 ## Planning Process
 
@@ -191,10 +147,6 @@ final class DevicePairingViewModel {
 - Unit tests for: [list view models / services]
 - UI tests for: [list flows, if any]
 
-## Documentation Needs
-
-- [What needs to be documented]
-
 ## Risks & Mitigations
 
 | Risk             | Mitigation    |
@@ -204,10 +156,9 @@ final class DevicePairingViewModel {
 
 ## Guidelines
 
-- Always check existing patterns before proposing new ones (look at the closest screen folder for reference).
-- Prefer extending existing screens / services over creating new ones.
-- The deployment target is iOS 26.0 and the whole codebase builds against it; don't plan `#available` branches or fallbacks for older runtimes.
-- Follow the project's existing convention even when a local one-off would be smaller — two ways of doing the same thing cost more than one slightly heavier way done everywhere.
-- Design for testability: protocols for services, `@Observable` view models, no singletons in business logic.
-- Consider concurrency: which work is on the main actor, which is detached. Mark types `@MainActor` where appropriate.
-- Think about accessibility (Dynamic Type, VoiceOver labels) and dark mode from the start.
+- Always check existing patterns before proposing new ones — open the closest screen folder first.
+- Prefer extending an existing screen / service over creating a new one.
+- Follow the project's existing convention even when a local one-off would be smaller.
+- Design for testability: protocols for services, `@Observable` view models, no singletons.
+- Say which work is on the main actor and which isn't, and mark `@MainActor` in the contracts you write.
+- Think about accessibility (Dynamic Type, VoiceOver labels) and dark mode from the start, not after.

@@ -455,7 +455,6 @@ struct FeedView: View {
 
 ### UIKit Hosts, Multi-Screen Flows, and Deep Links
 
-When UIKit hosts SwiftUI screens, flows span multiple screens, or deep links target nested destinations, move navigation ownership into a coordinator and follow `references/coordinator.md` (coordinator protocol, child coordinators, deep-link parsing). MVVM-specific rules:
 - ViewModels expose navigation as injected closures, never coordinator references.
 - In SwiftUI-only apps, a deep link can set the ViewModel's value-type `navigationPath` directly; parse and validate the URL in one place before touching state.
 
@@ -484,8 +483,6 @@ final class FeedViewModel {
 |---|---|
 | Pure SwiftUI, linear flows | `NavigationStack` path on ViewModel |
 | Sheets, alerts, confirmations | Optional state-driven presentation |
-| UIKit host or mixed SwiftUI/UIKit | Coordinator (`references/coordinator.md`) |
-| Multi-step flows (onboarding, checkout) | Child coordinators (`references/coordinator.md`) |
 | Universal Links / push notifications | Centralized deep-link parsing + state-driven nav |
 
 ## Advanced Variants
@@ -689,11 +686,7 @@ Use MVVM when:
 MVVM is lower ceremony than TCA/VIPER, but not "no ceremony": scale file splitting (`State`, `ViewData`, assembly/router types) to actual complexity instead of applying every type up front.
 
 Switch or pair when:
-- the feature feels too heavy: trim to the Default Path rather than switching patterns; consider `references/mvp.md` only for UIKit screens that need a strictly passive view
-- deterministic state machines or complex effect orchestration become primary: evolve to `references/mvi.md` or `references/tca.md`
-- strict layer boundaries matter more than presentation simplicity: pair with `references/clean-architecture.md`
 
-For cross-architecture disqualifiers and migration triggers, see `references/selection-guide.md`.
 
 ## PR Review Checklist
 

@@ -30,9 +30,10 @@ No Swift Testing skill is installed, deliberately — **this file is the authori
 conventions here (`struct` suites, fixture setup in `init()`, no `test` prefix on `@Test` methods,
 `#require` over `?` / `??`, `Foo.fixture()` builders). Don't let a generic skill talk you out of them.
 
-If a skill suggests Swift 6 concurrency constructs, `#available` checks, or XCTest-style
-`setUp`/`tearDown`/`XCTAssert` in the **unit** target, ignore it: this project is Swift 5.0 language mode,
-iOS 26.0, and XCTest stays confined to `MyHomeAppUITests/`.
+Two things `swift-concurrency-pro` will flag that are deliberate here, and the rest of the known conflicts,
+are resolved in [CLAUDE.md § Skill conflicts](../../CLAUDE.md#skill-conflicts--resolved-once-here): mocks
+use `@unchecked Sendable` on purpose, and XCTest-style `setUp` / `tearDown` / `XCTAssert` stay confined to
+`MyHomeAppUITests/`.
 
 ## Testing Stack
 
@@ -89,7 +90,7 @@ struct DevicesViewModelTests {
 
     init() {
         service = StubDeviceService()
-        viewModel = DevicesViewModel(service: service)
+        viewModel = DevicesViewModel(service: service, toastStore: ToastStore())
     }
 
     // MARK: - load()
@@ -328,10 +329,14 @@ If the coverage report flags a gap, ask whether the uncovered code is *behavior*
 
 ## Running Tests
 
-**After making changes, you MUST run the unit tests and report the result** — this is part of finishing the task, not optional. Always scope to the **UnitTests** plan (unit target only, no UI tests, coverage off). Do **not** run the UI tests (`AllTests` plan) unless the user explicitly asks for them.
+**You wrote or changed tests, so you MUST run them and report the result** — this is part of finishing the
+task, not optional. That's narrower than it sounds: CLAUDE.md tells every other agent *not* to run tests
+after every change, and the rule it carves out is exactly this one — you edited `MyHomeAppTests/`, so you
+verify them. Always scope to the **UnitTests** plan (unit target only, no UI tests, coverage off); never
+`AllTests` unless the user explicitly asks for the UI tests.
 
 ```bash
-# Unit tests — the plan to run after every change (fast, no UI tests)
+# Unit tests — run after writing or changing tests (fast, no UI tests)
 xcodebuild test \
   -scheme MyHomeApp \
   -destination 'platform=iOS Simulator,name=iPhone 13 mini,OS=26.5' \
@@ -347,14 +352,15 @@ xcodebuild test \
 # In Xcode: ⌘U (defaults to the UnitTests plan)
 ```
 
-Always pin `OS=26.5` in the destination: two simulators share the name `iPhone 13 mini` (one per installed runtime), and the iOS 18.6 one can no longer run the app at all. If `iPhone 13 mini` isn't available, pick another **iOS 26.x** simulator from `xcrun simctl list devices available`. Never claim success without a green run; if you can't run the tests (sandbox / tool missing), say so explicitly.
+Why `OS=26.5` is pinned, and what to do when that simulator is missing, is in
+[CLAUDE.md § Build & test](../../CLAUDE.md#build--test). Never claim success without a green run; if you
+can't run the tests (sandbox / tool missing), say so explicitly.
 
 ## Known Pitfalls
 
 - **Main-actor isolation in tests**: when the ViewModel is `@MainActor`, the test suite (`struct`) must be `@MainActor` too. Otherwise the compiler refuses the cross-isolation access.
 - **`@Observable` mutation**: assigning to a tracked property triggers SwiftUI updates; in tests you can assert the new value directly without an expectation.
-- **Implicit shared singletons**: if a service uses `.shared`, prefer instantiating the type under test with an explicit mock so a global instance doesn't leak across tests.
 - **No `tearDown`**: Swift Testing instances die after each test. If you need to clean up an external resource, do it in `deinit`.
 - **`#expect` vs `#require`**: `#expect` records a failure and keeps going. `#require` throws — use it when subsequent assertions would crash or be meaningless on failure.
 - **UI test instability**: prefer `waitForExistence` over implicit timing. Disable animations under UI tests via launch arguments if flakiness appears.
-- **Code coverage**: enable "Gather coverage" in the test scheme to inspect coverage in Xcode's report navigator.
+- **Coverage is off in the UnitTests plan** — by design. If you genuinely need a coverage number, say so and ask; don't switch plans to get one.
