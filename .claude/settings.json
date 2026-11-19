@@ -13,7 +13,16 @@
       "Bash(swiftlint:*)",
       "Bash(swiftformat:*)",
       "Bash(swift-format:*)",
-      "Bash(git *)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git blame:*)",
+      "Bash(git branch)",
+      "Bash(git remote -v)",
+      "Bash(git stash list)",
+      "Bash(git ls-files:*)",
+      "Bash(git rev-parse:*)",
       "Bash(ls *)",
       "Bash(find *)",
       "Bash(grep *)",
@@ -24,6 +33,39 @@
       "WebFetch(domain:developer.apple.com)",
       "WebFetch(domain:swift.org)",
       "WebFetch(domain:swiftpackageindex.com)"
+    ]
+  },
+  "enabledPlugins": {
+    "ios-simulator-skill@conorluddy": true,
+    "ponytail@ponytail": true,
+    "superpowers@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail"
+      }
+    },
+    "conorluddy": {
+      "source": {
+        "source": "github",
+        "repo": "conorluddy/ios-simulator-skill"
+      }
+    }
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/swiftlint-gate.sh\"",
+            "timeout": 120,
+            "statusMessage": "Checking SwiftLint"
+          }
+        ]
+      }
     ]
   }
 }

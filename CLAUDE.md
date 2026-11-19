@@ -10,8 +10,9 @@ Concretely:
 
 - **Prefer well-maintained libraries over custom reimplementations of common UI/infra patterns** (toasts, popups, charts, image loading, keychain wrappers, etc.) — added via SPM. Custom code is for project-specific logic, not generic infrastructure. Pick libraries with active maintenance, a real user base, and a small API surface; avoid bringing in a framework when a 50-line helper would do.
 - **Reach for native SwiftUI patterns first** (`@Observable`, `@Environment`, `NavigationStack`, `.task`, view modifiers). Don't invent a parallel system when SwiftUI already has one.
-- **Design for the next contributor**, not just today's feature. Centralize cross-cutting concerns (auth state, error presentation, navigation root) so screens don't each reinvent them, but don't pre-build abstraction layers for needs that don't exist yet.
-- **Don't over-engineer.** One hand-written composition root (`App/AppContainer.swift`) is the whole DI story — no DI framework, resolver, repository-over-service-over-data-source stacks, or custom reactive frameworks. Idiomatic SwiftUI is the bar; scalability comes from clean boundaries, not from layers.
+- **Design for the next contributor**, not just today's feature. Centralize cross-cutting concerns (auth state, error presentation, navigation root) so screens don't each reinvent them, but don't pre-build layers for a need you can't name.
+- **Abstract on purpose, not by reflex.** An abstraction earns its place when it keeps the codebase clean and tidy — it removes real duplication, gives a cross-cutting concern one home, or there's a credible chance a coming feature will need the same seam. It does not earn its place just because a feature exists: no factory, wrapper, or protocol per simple screen or model. One hand-written composition root (`App/AppContainer.swift`) is the whole DI story — no DI framework, resolver, repository-over-service-over-data-source stacks, or custom reactive frameworks. Idiomatic SwiftUI is the bar; scalability comes from clean boundaries, not from layers.
+- **Consistency beats a smaller diff.** Where this project already has a way of doing something (the `AppContainer` DI story, the loader/screen split, `FooRouter` destinations, `FooDraft` editors, the `FooError.text(for:)` error channels), follow it even when a local one-off would be less code. Look for the existing pattern before writing a new one; two ways to do the same thing cost more than one slightly heavier way done everywhere.
 
 ## Toolchain & targets
 
@@ -173,6 +174,13 @@ If `iPhone 13 mini` isn't available, check `xcrun simctl list devices available`
 
 [SwiftLint](https://github.com/realm/SwiftLint) is configured via `.swiftlint.yaml` at the repo root. Run `swiftlint` before finishing any task that touched Swift files (see the build & test section — it's part of the mandatory pre-report checks).
 
+This one is enforced, not just asked for: [.claude/hooks/swiftlint-gate.sh](.claude/hooks/swiftlint-gate.sh)
+runs on the `Stop` hook (wired in [.claude/settings.json](.claude/settings.json)). If the working tree has
+Swift changes and `swiftlint` reports an error, the turn is blocked and the errors come back to be fixed.
+Warnings are reported but don't block, and a turn that touched no Swift files skips the check entirely. The
+build is *not* hooked — it's too slow for every turn, so that gate is still on you and the pre-report rule
+above.
+
 ## Coding rules (short list — see agent files for full version)
 
 - `struct`/`enum` over `class`. `let` over `var`.
@@ -182,6 +190,18 @@ If `iPhone 13 mini` isn't available, check `xcrun simctl list devices available`
 - No singletons or default arguments in view-model inits — every dependency is injected; `AppContainer` is the only production caller.
 - Use the asset catalog for colors. Don't hardcode hex.
 - One primary type per file; file name matches the type.
+- **Comment the why, never the what.** Code says what it does; a comment exists only when a reader can't
+  see *why* it was written that way — a hub quirk, a workaround, a non-obvious ordering constraint, a
+  deliberate deviation from these rules. If the code is self-explanatory, leave it uncommented.
+  - Keep it to one line where one line does it. No filler ("This function is responsible for…", "Note
+    that…", "Simply"), no restating the signature, no step-by-step narration of the lines below.
+  - No section banners (`// ===== Properties =====`), no `// MARK:` in production files unless the file is
+    genuinely long and mixed, no commented-out code, no TODO without a reason.
+  - `///` doc comments are not required just because something is `public` or non-private. Add one when the
+    contract isn't obvious from the name and types (units, a value range, who owns the returned object,
+    what throws) and skip it otherwise.
+  - A shortcut with a known limit is the one thing that must be commented: `shortcut: <the limit>, <when to
+    upgrade>`.
 - Screen-level views get a `#Preview`. For small reusable components, add one only when the canvas would actually help iterate (e.g. multiple states shown side-by-side) — a lone capsule on a 6.7" canvas is noise.
 
 ## Test conventions
@@ -197,19 +217,38 @@ If `iPhone 13 mini` isn't available, check `xcrun simctl list devices available`
 
 ## Agent workflow
 
-The `.claude/agents/` folder defines five specialized prompts you can invoke:
+The `.claude/agents/` folder defines four subagents (YAML frontmatter, dispatchable by name):
 
 - **Architect** — plan a feature, no code
 - **Implementer** — write the code per the plan
-- **Reviewer** — review the diff against project standards
 - **Tester** — write Swift Testing unit tests
-- **StoryTeller** — write DocC / README docs
+- **Reviewer** — review the diff against project standards
 
-See [.claude/agents/README.md](.claude/agents/README.md) for the handoff flow.
+The chain is Architect → Implementer → Tester → Reviewer, looping back to Implementer for at most two
+rounds. See [.claude/agents/README.md](.claude/agents/README.md) for the handoff contracts.
 
 Slash commands live in `.claude/commands/`:
 
-- `/tests` — write or adjust unit tests for recent code changes
+- `/work <description>` — take a feature or bug through the whole chain: triages into a trivial / bug-fix /
+  feature lane, dispatches the subagents with explicit handoffs, runs the bounded review loop, and reports.
+  Runs straight through without stopping for approval. Never commits.
+- `/test [scope]` — the Tester → Reviewer tail on its own, for when code already exists and only needs
+  tests: writes them, then reviews them against the test conventions above.
+
+## Skills
+
+`.claude/skills/` holds third-party skills vendored into this repo (MIT, committed so they can be read and
+edited here):
+
+- **swiftui-pro** — SwiftUI review: deprecated API, data flow, navigation, accessibility, resizability
+- **swift-concurrency-pro** — async/await, actor isolation, cancellation review
+- **swift-architecture-skill** — architecture playbooks; this project is already MVVM, so its `references/mvvm.md` is the only relevant one
+
+**This file wins on conflict.** These skills are written for a generic project and will sometimes disagree
+with the rules above — swiftui-pro assumes iOS 27 / Swift 6.4 and asks before adding libraries, where this
+project targets iOS 26 / Swift 5 and *prefers* maintained libraries; swift-architecture-skill will offer to
+re-pick an architecture that is already settled. Take their framework knowledge, keep this project's
+conventions.
 
 ## Dependencies
 
@@ -219,7 +258,7 @@ Slash commands live in `.claude/commands/`:
 
 ## Things to avoid
 
-- Don't add comments that restate the code (`// Increment counter` above `counter += 1`).
+- Don't add comments that restate the code (`// Increment counter` above `counter += 1`) — see the comment rule under Coding rules.
 - Don't create planning / decision docs unless explicitly asked.
 - Don't add files to the Xcode project that should not be compiled (`README.md`, `.gitignore`, `.swiftlint.yaml`, `LICENSE`). Either leave them out of the project entirely or add them with **all target memberships unchecked**.
 - Don't refactor unrelated code while fixing a bug. Keep changes scoped to the request.
@@ -228,4 +267,7 @@ Slash commands live in `.claude/commands/`:
 
 - Default branch: `main`
 - Commit messages: short, imperative ("Add device pairing sheet", not "Added").
-- Only commit when explicitly asked.
+- Only commit when explicitly asked. This is backed by the permission rules in
+  [.claude/settings.json](.claude/settings.json): only read-only git commands (`status`, `diff`, `log`,
+  `show`, `blame`, …) are pre-approved, so `commit`, `push`, `reset`, `checkout` and `rebase` each need an
+  explicit OK at the prompt.

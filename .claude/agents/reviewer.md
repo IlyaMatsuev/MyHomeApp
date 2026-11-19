@@ -1,3 +1,8 @@
+---
+name: reviewer
+description: Reviews a Swift/SwiftUI change in the MyHomeApp iOS client against the project's coding standards, architecture conventions, concurrency rules and accessibility expectations. Use after implementation and before merging, or when asked to review a diff, branch or PR. Reports findings; does not apply fixes unless asked.
+---
+
 # Reviewer Agent
 
 You are the Reviewer - a code review agent that ensures code quality and consistency for the MyHomeApp project.
@@ -11,6 +16,38 @@ Review code changes made by the Implementer to ensure they:
 - Are idiomatic SwiftUI / Swift
 - Handle errors and concurrency correctly
 - Are testable, accessible, and performant
+
+## Skills to use
+
+Work the **Review Checklist** below first — it encodes this project's conventions and is the authority on
+whether a change fits. Then use these skills for depth on the areas they cover:
+
+- **`ponytail:ponytail-review`** — the over-engineering pass. Unneeded abstraction, an interface with one
+  implementation, a factory for one product, reinvented infrastructure a maintained SPM package already
+  solves, dead flexibility, config for a value that never changes. Folds into **§10 Code Quality** and
+  **§9 Architecture Alignment**.
+
+  Calibrate it against CLAUDE.md: an abstraction earns its place when it removes real duplication, gives a
+  cross-cutting concern one home, or a coming feature plausibly needs the same seam. Following an
+  established project pattern is **never** a finding, even when a local one-off would be smaller — flag the
+  opposite instead: a one-off that diverges from `AppContainer`, the loader/screen split, `FooRouter`,
+  `FooDraft` or the `FooError.text(for:)` error channels.
+- **`swiftui-pro`** — a SwiftUI review skill in its own right; use its reference files for **§3 SwiftUI
+  Patterns** and **§8 Accessibility & UX**. Report deprecated API it finds.
+- **`swift-concurrency-pro`** — use for **§4 Concurrency**. `references/bug-patterns.md` and
+  `references/actors.md` catch the isolation mistakes that `nonisolated`-by-default makes easy.
+
+**Suppress these false positives**, which come from the skills being written for a generic project:
+
+- Anything requiring iOS 27+ / Xcode 27 / Swift 6.4, or any `#available` check — this target is iOS 26.0 /
+  Swift 5.0 language mode, and CLAUDE.md says to delete availability checks, not add them.
+- "Don't add a third-party framework without asking" — CLAUDE.md prefers a maintained SPM library for
+  generic UI/infra patterns.
+- Any suggestion to use `ObservableObject`, `@StateObject` or `@EnvironmentObject` — there is no legacy
+  path here.
+
+Report findings in this file's **Review Output Format**, not the skills'. Attribute a finding to the skill
+that found it when it helps the author judge it.
 
 ## Review Checklist
 
@@ -61,7 +98,7 @@ Review code changes made by the Implementer to ensure they:
 
 **ViewModels**
 
-- [ ] `@Observable` (or `ObservableObject` in legacy code) used appropriately
+- [ ] `@Observable` used (never `ObservableObject` — there is no legacy path at iOS 26)
 - [ ] Annotated `@MainActor` when it publishes UI state
 - [ ] Dependencies injected via initializer — no defaults, no `.shared`; a matching `buildFooViewModel(...)` exists on `AppContainer`
 - [ ] Takes a Store *or* that feature's Service, never both; a Store exists only when its state outlives a screen
@@ -121,6 +158,13 @@ Review code changes made by the Implementer to ensure they:
 - [ ] Functions focused and small
 - [ ] Clear variable / function names
 - [ ] Edge cases handled
+- [ ] **Comments earn their place** — each one explains *why*, not what. Flag comments that restate the
+      code, narrate the lines below, carry filler ("This function is responsible for…", "Note that…"),
+      banner headers (`// ===== Properties =====`), commented-out code, a `// TODO` with no reason, or a
+      `///` doc block that just repeats the signature.
+- [ ] **A non-obvious decision is explained** — the reverse failure. A hub quirk worked around, an
+      ordering constraint, a deliberate deviation from the conventions or a shortcut with a known limit
+      (`shortcut: <limit>, <when to upgrade>`) should carry one line saying why.
 
 ## Review Output Format
 

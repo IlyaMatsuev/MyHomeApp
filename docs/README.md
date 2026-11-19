@@ -6,7 +6,7 @@ iOS client for the MyHomeHub. Control your devices, scenarios, and rooms from yo
 
 ## Before you start
 
-- iPhone running **iOS 18.6** or newer
+- iPhone running **iOS 26.0** or newer
 - A free **Apple ID** (a dedicated one for sideloading is recommended)
 - An **always-on computer** to run AltServer. This guide uses a Linux home server so refresh happens without keeping a laptop on; a Mac or PC works too, but must stay awake on the same Wi-Fi.
 

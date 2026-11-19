@@ -9,7 +9,7 @@ iOS client for the [My Home Hub](https://github.com/IlyaMatsuev/MyHomeHub). Buil
 ## Requirements
 
 - **Xcode** 26.x
-- **iOS** 18.6+ (deployment target)
+- **iOS** 26.0+ (deployment target)
 - **Swift** 5.0
 - **macOS** with Apple Silicon recommended
 
@@ -34,19 +34,19 @@ Dependencies are managed through SPM and pinned in `Package.resolved`. No CocoaP
 
 ## Running the app
 
-In Xcode: pick an iPhone simulator (iOS 18.x or 26.x) and press `Cmd+R`.
+In Xcode: pick an iPhone simulator running **iOS 26.x** and press `Cmd+R`.
 
 From the command line:
 
 ```bash
 # Build
-xcodebuild build -scheme MyHomeApp -destination 'platform=iOS Simulator,name=iPhone 13 mini'
+xcodebuild build -scheme MyHomeApp -destination 'platform=iOS Simulator,name=iPhone 13 mini,OS=26.5'
 
 # Discover available simulators
 xcrun simctl list devices available
 ```
 
-Substitute `iPhone 13 mini` with whatever simulator you have installed.
+Substitute `iPhone 13 mini` with whatever **iOS 26.x** simulator you have installed, and keep the `OS=` part pinned — two simulators can share a name, and an iOS 18.x runtime can't run the app.
 
 ## Running tests
 
@@ -58,15 +58,15 @@ From the command line:
 
 ```bash
 # Unit tests (fast — no UI tests)
-xcodebuild test -scheme MyHomeApp -destination 'platform=iOS Simulator,name=iPhone 13 mini' -testPlan UnitTests
+xcodebuild test -scheme MyHomeApp -destination 'platform=iOS Simulator,name=iPhone 13 mini,OS=26.5' -testPlan UnitTests
 
 # Everything, including UI tests
-xcodebuild test -scheme MyHomeApp -destination 'platform=iOS Simulator,name=iPhone 13 mini' -testPlan AllTests
+xcodebuild test -scheme MyHomeApp -destination 'platform=iOS Simulator,name=iPhone 13 mini,OS=26.5' -testPlan AllTests
 
 # A single test method
 xcodebuild test \
   -scheme MyHomeApp \
-  -destination 'platform=iOS Simulator,name=iPhone 13 mini' \
+  -destination 'platform=iOS Simulator,name=iPhone 13 mini,OS=26.5' \
   -testPlan UnitTests \
   -only-testing:MyHomeAppTests/DevicesViewModelTests/loadGroupsDevicesByRoom
 ```
