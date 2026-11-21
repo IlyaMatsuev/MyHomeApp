@@ -46,6 +46,52 @@ struct ServerTests {
         #expect(server.iconSystemName == "globe")
     }
 
+    // MARK: - valid
+
+    @Test
+    func validWithLabelAddressAndNoHeaders() {
+        #expect(Server(.https, "home.example.com", label: "Home").valid)
+    }
+
+    @Test
+    func validIgnoresBlankHeaders() {
+        let server = Server(.https, "home.example.com", label: "Home", headers: [ServerHeader()])
+        #expect(server.valid)
+    }
+
+    @Test
+    func invalidWhenAHeaderIsInvalid() {
+        let server = Server(
+            .https,
+            "home.example.com",
+            label: "Home",
+            headers: [ServerHeader(name: "X Proxy", value: "token")]
+        )
+        #expect(!server.valid)
+    }
+
+    @Test
+    func invalidWhenTwoHeadersShareNameIgnoringCase() {
+        let server = Server(
+            .https,
+            "home.example.com",
+            label: "Home",
+            headers: [
+                ServerHeader(name: "X-Proxy-Authorization", value: "old"),
+                ServerHeader(name: "x-proxy-authorization ", value: "new")
+            ]
+        )
+        #expect(server.duplicateHeaderNames == ["x-proxy-authorization"])
+        #expect(!server.valid)
+    }
+
+    @Test
+    func blankHeadersAreNotDuplicates() {
+        let server = Server(.https, "home.example.com", label: "Home", headers: [ServerHeader(), ServerHeader()])
+        #expect(server.duplicateHeaderNames.isEmpty)
+        #expect(server.valid)
+    }
+
     // MARK: - Codable
 
     @Test
@@ -57,5 +103,30 @@ struct ServerTests {
         let encoded = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode([Server].self, from: encoded)
         #expect(decoded == original)
+    }
+
+    @Test
+    func codableRoundTripPreservesHeaders() throws {
+        let original = Server(
+            .https,
+            "home.example.com",
+            remote: true,
+            headers: [ServerHeader(name: "X-Proxy-Authorization", value: "token")]
+        )
+        let encoded = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(Server.self, from: encoded)
+        #expect(decoded == original)
+    }
+
+    @Test
+    func decodingServerSavedBeforeHeadersExistedDefaultsToNoHeaders() throws {
+        let legacy = Data(#"{"label":"Home","scheme":"https","address":"home.example.com","remote":true}"#.utf8)
+
+        let decoded = try JSONDecoder().decode(Server.self, from: legacy)
+
+        #expect(decoded.headers.isEmpty)
+        #expect(decoded.label == "Home")
+        #expect(decoded.address == "home.example.com")
+        #expect(decoded.remote)
     }
 }

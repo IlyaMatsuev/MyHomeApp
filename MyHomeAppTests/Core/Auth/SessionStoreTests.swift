@@ -48,7 +48,7 @@ struct SessionStoreTests {
 
     @Test
     func loadWhenAuthTokenPersistenceThrowsBecomesUnauthenticated() async {
-        tokenPersistence.loadResult = .failure(AuthTokenPersistanceError.keychain(status: -1))
+        tokenPersistence.loadResult = .failure(KeychainError(status: -1))
 
         await store.load()
 

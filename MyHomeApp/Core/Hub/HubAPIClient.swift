@@ -59,7 +59,7 @@ final class HubAPIClient: MyHomeAPIClient, Sendable {
             throw HubAPIError.noServerSelected
         }
 
-        let urlRequest = await createRequest(baseURL, request)
+        let urlRequest = await createRequest(baseURL, request, headers: server.headers)
 
         let data: Data
         let response: URLResponse
@@ -79,12 +79,16 @@ final class HubAPIClient: MyHomeAPIClient, Sendable {
         return try handleResponse(data, httpResponse)
     }
 
-    private func createRequest(_ baseURL: URL, _ request: HubRequest) async -> URLRequest {
+    private func createRequest(_ baseURL: URL, _ request: HubRequest, headers: [ServerHeader]) async -> URLRequest {
         Self.logger.debug("Sending a request on \(request.method.rawValue) \"\(request.path)\"")
 
         let url = buildURL(baseURL: baseURL, request: request)
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = request.method.rawValue
+        // The server's custom headers go first, so they can't replace the ones the hub API relies on.
+        for header in headers {
+            urlRequest.setValue(header.value, forHTTPHeaderField: header.name)
+        }
         urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
 
         if let body = request.body {

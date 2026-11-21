@@ -441,6 +441,223 @@ struct ServerSetupViewModelTests {
         #expect(viewModel.errorMessage == nil)
     }
 
+    // MARK: - custom headers — editing
+
+    @Test
+    func draftServerStartsWithoutHeaders() {
+        #expect(viewModel.draftServer.headers.isEmpty)
+    }
+
+    @Test
+    func addDraftHeaderAppendsBlankHeader() throws {
+        viewModel.showAddServerForm()
+
+        viewModel.addDraftHeader()
+
+        let header = try #require(viewModel.draftServer.headers.first)
+        #expect(viewModel.draftServer.headers.count == 1)
+        #expect(header.isBlank)
+    }
+
+    @Test
+    func removeDraftHeadersRemovesAtOffsets() {
+        viewModel.showAddServerForm()
+        viewModel.draftServer.headers = [
+            ServerHeader(name: "X-First", value: "1"),
+            ServerHeader(name: "X-Second", value: "2")
+        ]
+
+        viewModel.removeDraftHeaders(at: IndexSet(integer: 0))
+
+        #expect(viewModel.draftServer.headers.map(\.name) == ["X-Second"])
+    }
+
+    @Test
+    func showAddServerFormDropsHeadersOfPreviousDraft() {
+        viewModel.showEditServerForm(
+            Server(.https, "home.example.com", label: "Cabin", headers: [ServerHeader(name: "X-Api-Key", value: "token")])
+        )
+        viewModel.closeServerForm()
+
+        viewModel.showAddServerForm()
+
+        #expect(viewModel.draftServer.headers.isEmpty)
+    }
+
+    // MARK: - custom headers — validation
+
+    @Test
+    func canSaveDraftIsFalseWithInvalidHeader() {
+        viewModel.showAddServerForm()
+        viewModel.draftServer.address = "hub.home"
+        viewModel.draftServer.headers = [ServerHeader(name: "X Proxy", value: "token")]
+
+        #expect(!viewModel.canSaveDraft)
+    }
+
+    @Test
+    func canSaveDraftIgnoresBlankHeader() {
+        viewModel.showAddServerForm()
+        viewModel.draftServer.address = "hub.home"
+        viewModel.addDraftHeader()
+
+        #expect(viewModel.canSaveDraft)
+    }
+
+    @Test
+    func headerNameErrorIsNilForBlankHeader() {
+        #expect(viewModel.headerNameError(for: ServerHeader()) == nil)
+    }
+
+    @Test
+    func headerNameErrorIsNilForValidName() {
+        #expect(viewModel.headerNameError(for: ServerHeader(name: "X-Api-Key", value: "")) == nil)
+    }
+
+    @Test
+    func headerNameErrorAsksForNameWhenOnlyValueIsSet() {
+        #expect(viewModel.headerNameError(for: ServerHeader(name: "", value: "token")) == "Enter a header name.")
+    }
+
+    @Test
+    func headerNameErrorFlagsInvalidCharacters() {
+        let error = viewModel.headerNameError(for: ServerHeader(name: "X Proxy", value: "token"))
+        #expect(error == "Use letters, digits and dashes, e.g. X-Api-Key.")
+    }
+
+    @Test
+    func headerNameErrorFlagsReservedName() {
+        let error = viewModel.headerNameError(for: ServerHeader(name: "Proxy-Authorization", value: "token"))
+        #expect(error == "The app can't send this header. Use another name, e.g. X-Proxy-Authorization.")
+    }
+
+    @Test
+    func headerNameErrorFlagsDuplicateName() throws {
+        viewModel.showAddServerForm()
+        viewModel.draftServer.address = "hub.home"
+        viewModel.draftServer.headers = [
+            ServerHeader(name: "X-Api-Key", value: "1"),
+            ServerHeader(name: "x-api-key", value: "2")
+        ]
+        let duplicate = try #require(viewModel.draftServer.headers.last)
+
+        #expect(viewModel.headerNameError(for: duplicate) == "This header is already in the list.")
+        #expect(!viewModel.canSaveDraft)
+    }
+
+    @Test
+    func headerValueErrorIsNilForBlankHeader() {
+        #expect(viewModel.headerValueError(for: ServerHeader()) == nil)
+    }
+
+    @Test
+    func headerValueErrorAsksForValueWhenOnlyNameIsSet() {
+        #expect(viewModel.headerValueError(for: ServerHeader(name: "X-Api-Key", value: "")) == "Enter a header value.")
+    }
+
+    @Test
+    func headerValueErrorIsNilForValidValue() {
+        #expect(viewModel.headerValueError(for: ServerHeader(name: "X-Api-Key", value: "token")) == nil)
+    }
+
+    @Test
+    func headerValueErrorFlagsLineBreaks() {
+        let error = viewModel.headerValueError(for: ServerHeader(name: "X-Api-Key", value: "tok\nen"))
+        #expect(error == "Use printable ASCII characters only.")
+    }
+
+    // MARK: - custom headers — saveDraft()
+
+    @Test
+    func saveDraftWithInvalidHeaderSetsHeadersErrorWithoutCallingService() async {
+        viewModel.showAddServerForm()
+        viewModel.draftServer.address = "hub.home"
+        viewModel.draftServer.headers = [ServerHeader(name: "", value: "token")]
+
+        await viewModel.saveDraft()
+
+        #expect(viewModel.servers.isEmpty)
+        #expect(service.checkedServers.isEmpty)
+        #expect(viewModel.draftErrorMessage == "Fix the custom headers in Advanced settings.")
+    }
+
+    @Test
+    func saveDraftChecksReachabilityWithHeaders() async throws {
+        service.isReachableResult = true
+        viewModel.showAddServerForm()
+        viewModel.draftServer.address = "home.example.com"
+        viewModel.draftServer.headers = [ServerHeader(name: "X-Proxy-Authorization", value: "token")]
+
+        await viewModel.saveDraft()
+
+        let checked = try #require(service.checkedServers.first)
+        let header = try #require(checked.headers.first)
+        #expect(checked.headers.count == 1)
+        #expect(header.name == "X-Proxy-Authorization")
+        #expect(header.value == "token")
+    }
+
+    @Test
+    func saveDraftDropsBlankHeadersAndTrimsTheRest() async throws {
+        service.isReachableResult = true
+        viewModel.showAddServerForm()
+        viewModel.draftServer.address = "home.example.com"
+        viewModel.draftServer.headers = [
+            ServerHeader(name: " X-Proxy-Authorization ", value: "token\n"),
+            ServerHeader()
+        ]
+
+        await viewModel.saveDraft()
+
+        let added = try #require(viewModel.servers.first)
+        let header = try #require(added.headers.first)
+        #expect(added.headers.count == 1)
+        #expect(header.name == "X-Proxy-Authorization")
+        #expect(header.value == "token")
+    }
+
+    @Test
+    func failedSaveDraftLeavesFormHeadersUntouched() async {
+        service.isReachableResult = false
+        viewModel.showAddServerForm()
+        viewModel.draftServer.address = "home.example.com"
+        let headers = [ServerHeader(name: " X-Proxy-Authorization ", value: "token"), ServerHeader()]
+        viewModel.draftServer.headers = headers
+
+        await viewModel.saveDraft()
+
+        #expect(viewModel.draftErrorMessage == "Couldn't connect to the server.")
+        #expect(viewModel.draftServer.headers == headers)
+    }
+
+    @Test
+    func saveDraftWhileEditingReplacesHeaders() async throws {
+        let original = Server(
+            .https,
+            "home.example.com",
+            remote: true,
+            label: "Cabin",
+            headers: [ServerHeader(name: "X-Old", value: "old")]
+        )
+        viewModel.servers = [original]
+        service.isReachableResult = true
+
+        viewModel.showEditServerForm(original)
+        viewModel.removeDraftHeaders(at: IndexSet(integer: 0))
+        viewModel.addDraftHeader()
+        viewModel.draftServer.headers[0].name = "X-New"
+        viewModel.draftServer.headers[0].value = "new"
+
+        await viewModel.saveDraft()
+
+        let updated = try #require(viewModel.servers.first)
+        let header = try #require(updated.headers.first)
+        #expect(viewModel.servers.count == 1)
+        #expect(updated.headers.count == 1)
+        #expect(header.name == "X-New")
+        #expect(header.value == "new")
+    }
+
     // MARK: - continueSetup()
 
     @Test

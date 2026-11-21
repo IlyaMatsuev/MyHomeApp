@@ -4,6 +4,8 @@ struct AddEditServerSheet: View {
     @Bindable var viewModel: ServerSetupViewModel
     @Binding var server: Server
 
+    @State private var isAdvancedExpanded = false
+
     var loading: Bool { viewModel.loading }
     var errorMessage: String? { viewModel.draftErrorMessage }
 
@@ -31,19 +33,7 @@ struct AddEditServerSheet: View {
         NavigationStack {
             ZStack {
                 Color("BackgroundPrimary").ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 20) {
-                        labelField
-                        urlField
-                        remoteToggle
-                        tip
-                        errorText
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 24)
-                }
-                .scrollDismissesKeyboard(.interactively)
+                form
             }
             .navigationTitle(mode.title)
             .navigationBarTitleDisplayMode(.inline)
@@ -64,6 +54,32 @@ struct AddEditServerSheet: View {
                 }
             }
         }
+    }
+
+    /// A `List` rather than a `ScrollView`, because swipe-to-delete on the header rows only works in one.
+    /// The rows drop the list chrome, so the fields keep their card look.
+    private var form: some View {
+        List {
+            Group {
+                labelField
+                urlField
+                remoteToggle
+                tip
+                advancedToggle
+            }
+            .formRow()
+
+            if isAdvancedExpanded {
+                advancedSettings
+            }
+
+            errorText
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+        .contentMargins(.vertical, 14, for: .scrollContent)
+        .environment(\.defaultMinListRowHeight, 0)
     }
 
     private var labelField: some View {
@@ -147,6 +163,81 @@ struct AddEditServerSheet: View {
         .disabled(loading)
     }
 
+    private var advancedToggle: some View {
+        Button {
+            withAnimation { isAdvancedExpanded.toggle() }
+        } label: {
+            HStack(spacing: 8) {
+                Text("Advanced settings")
+                    .foregroundStyle(Color("TextPrimary"))
+                Spacer()
+                if !isAdvancedExpanded && filledHeaderCount > 0 {
+                    Text("^[\(filledHeaderCount) header](inflect: true)")
+                        .font(.caption)
+                        .foregroundStyle(Color("TextSecondary"))
+                }
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color("TextSecondary"))
+                    .rotationEffect(.degrees(isAdvancedExpanded ? 90 : 0))
+            }
+            .padding()
+            .background(Color("BackgroundSecondary"))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityValue(isAdvancedExpanded ? "Expanded" : "Collapsed")
+    }
+
+    private var filledHeaderCount: Int {
+        server.headers.filter { !$0.isBlank }.count
+    }
+
+    @ViewBuilder
+    private var advancedSettings: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Custom HTTP headers")
+                .font(.footnote)
+                .foregroundStyle(Color("TextPrimary"))
+            Text("Sent with every request to this server, e.g. a token your reverse proxy checks. Swipe left on a header to delete it.")
+                .font(.caption)
+                .foregroundStyle(Color("TextSecondary"))
+        }
+        .formRow()
+
+        ForEach($server.headers) { $header in
+            ServerHeaderRow(
+                header: $header,
+                nameError: viewModel.headerNameError(for: header),
+                valueError: viewModel.headerValueError(for: header)
+            )
+            .disabled(loading)
+            .formRow()
+        }
+        .onDelete(perform: viewModel.removeDraftHeaders)
+        .deleteDisabled(loading)
+
+        addHeaderButton
+            .formRow()
+    }
+
+    private var addHeaderButton: some View {
+        Button {
+            withAnimation { viewModel.addDraftHeader() }
+        } label: {
+            Label("Add header", systemImage: "plus")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color("AccentPrimary"))
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(Color("BackgroundSecondary"))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(loading)
+    }
+
     @ViewBuilder
     private var errorText: some View {
         if let message = errorMessage {
@@ -156,6 +247,7 @@ struct AddEditServerSheet: View {
             }
             .foregroundStyle(Color("Danger"))
             .frame(maxWidth: .infinity, alignment: .leading)
+            .formRow()
         }
     }
 
@@ -177,5 +269,13 @@ struct AddEditServerSheet: View {
         } else {
             "Make sure your phone is connected to the same Wi-Fi network as the server."
         }
+    }
+}
+
+private extension View {
+    func formRow() -> some View {
+        listRowInsets(EdgeInsets(top: 10, leading: 24, bottom: 10, trailing: 24))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
     }
 }
