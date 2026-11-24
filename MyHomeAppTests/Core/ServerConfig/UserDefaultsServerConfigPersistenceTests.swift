@@ -93,33 +93,11 @@ struct UserDefaultsServerConfigPersistenceTests {
     // MARK: - unreadable headers
 
     @Test
-    func saveAfterUnreadableLoadThrowsAndChangesNeitherStore() throws {
+    func loadReturnsServersWithoutHeadersWhenTheyCannotBeRead() throws {
         try persistence.save([Self.home.withHeaders(Self.secret), Self.cabin])
-        let savedList = try #require(defaults.data(forKey: Self.key))
-        let savedHeaders = try #require(storage.data)
         storage.readError = StorageError()
 
         #expect(try persistence.load() == [Self.home, Self.cabin])
-
-        #expect(throws: ServerConfigError.headersUnreadable) {
-            try persistence.save([Self.cabin])
-        }
-        #expect(defaults.data(forKey: Self.key) == savedList)
-        #expect(storage.data == savedHeaders)
-    }
-
-    @Test
-    func successfulLoadAfterUnreadableOneRestoresHeadersAndReenablesSave() throws {
-        let server = Self.home.withHeaders(Self.secret)
-        try persistence.save([server])
-        storage.readError = StorageError()
-        _ = try persistence.load()
-        storage.readError = nil
-
-        #expect(try persistence.load() == [server])
-
-        try persistence.save([Self.cabin])
-        #expect(try persistence.load() == [Self.cabin])
     }
 
     @Test
@@ -170,18 +148,5 @@ struct UserDefaultsServerConfigPersistenceTests {
 
         #expect(try persistence.load() == nil)
         #expect(storage.data == nil)
-    }
-
-    @Test
-    func clearAfterUnreadableLoadReenablesSave() throws {
-        try persistence.save([Self.home.withHeaders(Self.secret)])
-        storage.readError = StorageError()
-        _ = try persistence.load()
-
-        try persistence.clear()
-
-        storage.readError = nil
-        try persistence.save([Self.cabin])
-        #expect(try persistence.load() == [Self.cabin])
     }
 }

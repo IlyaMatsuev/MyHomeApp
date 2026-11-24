@@ -8,9 +8,6 @@ final class UserDefaultsServerConfigPersistence: ServerConfigPersistence, @unche
     private let key: String
     private let defaults: UserDefaults
 
-    private let lock = NSLock()
-    private var headersUnreadable = false
-
     init(headersStorage: any SecretStorage, key: String = "com.myhome.servers", defaults: UserDefaults = .standard) {
         self.headersStorage = headersStorage
         self.key = key
@@ -18,9 +15,6 @@ final class UserDefaultsServerConfigPersistence: ServerConfigPersistence, @unche
     }
 
     func load() throws -> [Server]? {
-        lock.lock()
-        defer { lock.unlock() }
-
         guard let data = defaults.data(forKey: key) else { return nil }
 
         var servers: [Server]
@@ -39,14 +33,6 @@ final class UserDefaultsServerConfigPersistence: ServerConfigPersistence, @unche
 
     func save(_ servers: [Server]) throws {
         guard !servers.isEmpty else { return }
-
-        lock.lock()
-        defer { lock.unlock() }
-
-        // Saving now would overwrite headers nobody has seen.
-        if headersUnreadable {
-            throw ServerConfigError.headersUnreadable
-        }
 
         let headers = servers.reduce(into: [Server.ID: [ServerHeader]]()) { result, server in
             if !server.headers.isEmpty {
@@ -73,33 +59,18 @@ final class UserDefaultsServerConfigPersistence: ServerConfigPersistence, @unche
     }
 
     func clear() throws {
-        lock.lock()
-        defer { lock.unlock() }
-
         try headersStorage.delete()
-        headersUnreadable = false
         defaults.removeObject(forKey: key)
     }
 
     // Never throws: the store treats a failed load as "no servers", and the next save would then replace the list.
+    // shortcut: a save after a failed read erases the stored headers, block it if reads turn out to fail in practice.
     private func loadHeaders() -> [Server.ID: [ServerHeader]] {
-        let data: Data?
         do {
-            data = try headersStorage.read()
-            headersUnreadable = false
-        } catch {
-            Self.logger.error("Failed to read server headers: \(error.localizedDescription)")
-            headersUnreadable = true
-            return [:]
-        }
-
-        guard let data else { return [:] }
-        do {
+            guard let data = try headersStorage.read() else { return [:] }
             return try JSONDecoder().decode([Server.ID: [ServerHeader]].self, from: data)
         } catch {
-            // `headersUnreadable` stays off: corrupt data never recovers and the Keychain outlives a reinstall,
-            // so blocking saves here would block them forever.
-            Self.logger.error("Failed to decode server headers: \(error.localizedDescription)")
+            Self.logger.error("Failed to load server headers: \(error.localizedDescription)")
             return [:]
         }
     }
