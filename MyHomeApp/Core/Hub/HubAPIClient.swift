@@ -59,12 +59,13 @@ final class HubAPIClient: MyHomeAPIClient, Sendable {
             throw HubAPIError.noServerSelected
         }
 
-        let urlRequest = await createRequest(baseURL, request)
+        let urlRequest = await createRequest(baseURL, request, headers: server.headers)
+        let redirectGuard = ServerHeaderRedirectGuard(server: server)
 
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await session.data(for: urlRequest)
+            (data, response) = try await session.data(for: urlRequest, delegate: redirectGuard)
         } catch {
             let reason = error.localizedDescription
             Self.logger.error("Failed to send a request: \(reason)")
@@ -79,12 +80,16 @@ final class HubAPIClient: MyHomeAPIClient, Sendable {
         return try handleResponse(data, httpResponse)
     }
 
-    private func createRequest(_ baseURL: URL, _ request: HubRequest) async -> URLRequest {
+    private func createRequest(_ baseURL: URL, _ request: HubRequest, headers: [ServerHeader]) async -> URLRequest {
         Self.logger.debug("Sending a request on \(request.method.rawValue) \"\(request.path)\"")
 
         let url = buildURL(baseURL: baseURL, request: request)
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = request.method.rawValue
+
+        for header in headers {
+            urlRequest.setValue(header.value, forHTTPHeaderField: header.name)
+        }
         urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
 
         if let body = request.body {
@@ -117,18 +122,26 @@ final class HubAPIClient: MyHomeAPIClient, Sendable {
 
         switch response.statusCode {
         case 400:
-            let errorResponse = try decodeValidationResponse(data)
-            throw HubAPIError.validation(errorResponse.firstError.path, errorResponse.firstError.message)
+            guard let error = try decodeValidationResponse(data).details.errors.first else {
+                throw HubAPIError.unexpected
+            }
+            throw HubAPIError.validation(error.path, error.message)
+
         case 401:
             throw HubAPIError.unauthorized
+
         case 403:
             throw HubAPIError.forbidden
+
         case 404:
             throw HubAPIError.notFound
+
         case 409:
             throw HubAPIError.conflict
+
         case 429:
             throw HubAPIError.tooManyRequests
+
         default:
             throw HubAPIError.unexpected
         }

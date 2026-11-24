@@ -34,13 +34,14 @@ struct LoginView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: Route.self) { route in
                 switch route {
-                case .newRegistrationRequest(let email, let comment):
+                case let .newRegistrationRequest(email, comment):
                     RegistrationRequestView(
                         email: email,
                         comment: comment,
                         onSubmitted: { path = [.registrationRequestStatus] },
                         onAlreadyApproved: { path.append(.register) }
                     )
+
                 case .registrationRequestStatus:
                     RegistrationStatusView(
                         onDismiss: { path.removeAll() },
@@ -51,6 +52,7 @@ struct LoginView: View {
                             path.append(.newRegistrationRequest(email: email, comment: comment))
                         }
                     )
+
                 case .register:
                     RegisterView(onRegistered: {
                         let email = container.registrationStore.pendingRequest?.email ?? ""

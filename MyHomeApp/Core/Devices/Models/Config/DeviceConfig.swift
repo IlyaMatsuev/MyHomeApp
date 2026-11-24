@@ -4,11 +4,9 @@
 /// requested with `includeConfig=true`, so mutation responses come back without it —
 /// see `Device.preservingConfig(from:)`.
 struct DeviceConfig: Codable, Hashable {
-    // swiftlint:disable discouraged_optional_collection
     let commands: [DeviceConfigItem]?
     let controls: [DeviceConfigItem]?
     let measurements: [DeviceConfigItem]?
-    // swiftlint:enable discouraged_optional_collection
 }
 
 extension DeviceConfig {

@@ -2,8 +2,6 @@ import Foundation
 import Testing
 @testable import MyHomeApp
 
-// swiftlint:disable file_length
-
 @Suite(.serialized)
 @MainActor
 // swiftlint:disable:next type_body_length
@@ -12,12 +10,16 @@ struct HubAPIClientTests {
         let name: String
     }
 
-    private nonisolated static let server = Server(.http, "hub.local:8080", label: "Test Hub")
-    private nonisolated static let token = AuthToken.fixture(accessToken: "test-token")
+    nonisolated private static let server = Server(.http, "hub.local:8080", label: "Test Hub")
+    nonisolated private static let proxiedServer = server.withHeaders(
+        ServerHeader(name: "X-Proxy-Key", value: "s3cr3t"),
+        ServerHeader(name: "X-Tenant", value: "home")
+    )
+    nonisolated private static let token = AuthToken.fixture(accessToken: "test-token")
 
     private static func makeClient(
-        server: Server? = HubAPIClientTests.server,
-        token: AuthToken? = HubAPIClientTests.token,
+        server: Server? = Self.server,
+        token: AuthToken? = Self.token,
         handler: @escaping TestURLProtocol.Handler
     ) -> HubAPIClient {
         let context = HubAPIContext()
@@ -32,7 +34,7 @@ struct HubAPIClientTests {
         HubAPIClient(context: context, session: .testSession(handler: handler))
     }
 
-    private nonisolated static func okResponse(
+    nonisolated private static func okResponse(
         for request: URLRequest,
         body: Data = Data()
     ) -> (HTTPURLResponse, Data) {
@@ -42,7 +44,7 @@ struct HubAPIClientTests {
         return (response, body)
     }
 
-    private nonisolated static func response(
+    nonisolated private static func response(
         for request: URLRequest,
         status: Int,
         body: Data = Data()
@@ -213,6 +215,19 @@ struct HubAPIClientTests {
     }
 
     // MARK: - status code mapping
+
+    @Test(arguments: [
+        (#"[{"message": "Name is required", "path": "name"}]"#, HubAPIError.validation("name", "Name is required")),
+        ("[]", HubAPIError.unexpected)
+    ])
+    func send400ThrowsFirstValidationErrorIfAny(errors: String, expected: HubAPIError) async {
+        let body = Data(#"{"messages": [], "details": {"errors": \#(errors)}, "statusCode": 400}"#.utf8)
+        let client = Self.makeClient { Self.response(for: $0, status: 400, body: body) }
+
+        await #expect(throws: expected) {
+            let _: SamplePayload = try await client.send(.get("/devices"))
+        }
+    }
 
     @Test
     func send401ThrowsUnauthorized() async {
@@ -416,8 +431,8 @@ struct HubAPIClientTests {
         let captured = CapturedRequest()
         let calls = RequestCounter()
         let auth = StubAuthProvider(sessionToken: AuthToken.fixture(accessToken: "old"))
-        auth.refreshHandler = { [unowned auth] in
-            auth.sessionToken = AuthToken.fixture(accessToken: "new")
+        auth.refreshHandler = { [weak auth] in
+            auth?.sessionToken = AuthToken.fixture(accessToken: "new")
             return true
         }
         let context = HubAPIContext()
@@ -437,6 +452,108 @@ struct HubAPIClientTests {
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer new")
     }
 
+    // MARK: - custom headers
+
+    @Test(arguments: [true, false])
+    func sendAttachesCurrentServerHeaders(protected: Bool) async throws {
+        let captured = CapturedRequest()
+        let client = Self.makeClient(server: Self.proxiedServer) { request in
+            captured.value = request
+            return Self.okResponse(for: request)
+        }
+
+        try await client.send(.get("/devices", protected: protected))
+
+        let request = try #require(captured.value)
+        #expect(request.value(forHTTPHeaderField: "X-Proxy-Key") == "s3cr3t")
+        #expect(request.value(forHTTPHeaderField: "X-Tenant") == "home")
+    }
+
+    @Test(arguments: [true, false])
+    func sendToServerAttachesTargetHeadersInsteadOfCurrentServerHeaders(protected: Bool) async throws {
+        let captured = CapturedRequest()
+        let client = Self.makeClient(server: Self.proxiedServer) { request in
+            captured.value = request
+            return Self.okResponse(for: request)
+        }
+        let target = Server(.https, "other.host:9000").withHeaders(ServerHeader(name: "X-Target-Key", value: "target"))
+
+        try await client.send(.get("/info", protected: protected), to: target)
+
+        let request = try #require(captured.value)
+        #expect(request.value(forHTTPHeaderField: "X-Target-Key") == "target")
+        #expect(request.value(forHTTPHeaderField: "X-Proxy-Key") == nil)
+    }
+
+    @Test
+    func retryAfterRefreshAttachesServerHeadersAgain() async throws {
+        let captured = CapturedRequest()
+        let calls = RequestCounter()
+        let context = HubAPIContext()
+        context.attach(
+            auth: StubAuthProvider(sessionToken: Self.token) { true },
+            servers: StubServerProvider(selectedServer: Self.proxiedServer)
+        )
+        let client = Self.makeClient(context: context) { request in
+            calls.append(request)
+            captured.value = request
+            return Self.response(for: request, status: calls.count == 1 ? 401 : 200)
+        }
+
+        try await client.send(.get("/devices"))
+
+        #expect(calls.count == 2)
+        let retry = try #require(captured.value)
+        #expect(retry.value(forHTTPHeaderField: "X-Proxy-Key") == "s3cr3t")
+    }
+
+    @Test
+    func appHeadersWinOverServerHeaders() async throws {
+        let captured = CapturedRequest()
+        let server = Self.server.withHeaders(
+            ServerHeader(name: "authorization", value: "custom"),
+            ServerHeader(name: "ACCEPT", value: "custom"),
+            ServerHeader(name: "content-type", value: "custom")
+        )
+        let client = Self.makeClient(server: server) { request in
+            captured.value = request
+            return Self.okResponse(for: request)
+        }
+
+        try await client.send(try .post("/devices", SamplePayload(name: "lamp")))
+
+        let request = try #require(captured.value)
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer test-token")
+        #expect(request.value(forHTTPHeaderField: "Accept") == "application/json")
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+    }
+
+    @Test
+    func crossHostRedirectDropsServerHeaders() async throws {
+        let captured = CapturedRequest()
+        let client = Self.makeClient(server: Self.proxiedServer) { request in
+            guard request.url?.host() == "hub.local" else {
+                captured.value = request
+                return Self.okResponse(for: request)
+            }
+            let url = try #require(request.url)
+            let redirect = HTTPURLResponse(
+                url: url,
+                statusCode: 302,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Location": "http://elsewhere.example.com/devices"]
+            )
+            return (try #require(redirect), Data())
+        }
+
+        try await client.send(.get("/devices"))
+
+        let redirected = try #require(captured.value)
+        #expect(redirected.url?.host() == "elsewhere.example.com")
+        #expect(redirected.value(forHTTPHeaderField: "X-Proxy-Key") == nil)
+        #expect(redirected.value(forHTTPHeaderField: "X-Tenant") == nil)
+    }
+
     // MARK: - transport errors
 
     @Test
@@ -452,7 +569,7 @@ struct HubAPIClientTests {
 
     // MARK: - helpers
 
-    private nonisolated static func encode<T: Encodable>(_ value: T) throws -> Data {
+    nonisolated private static func encode<T: Encodable>(_ value: T) throws -> Data {
         try JSONEncoder().encode(value)
     }
 }
@@ -463,7 +580,7 @@ private final class CapturedRequest: @unchecked Sendable {
 
 private final class RequestCounter: @unchecked Sendable {
     private(set) var count: Int = 0
-    func append(_ request: URLRequest) { count += 1 }
+    func append(_: URLRequest) { count += 1 }
 }
 
 private extension URLRequest {

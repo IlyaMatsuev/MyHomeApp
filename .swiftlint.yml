@@ -40,8 +40,6 @@ opt_in_rules:
   - discouraged_assert                       # Prefer `assertionFailure` over `assert(false)`
   - discouraged_none_name                    # Avoid `case none` in enums (collides with Optional.none)
   - discouraged_object_literal               # Prefer initializers over `#colorLiteral`/`#imageLiteral`
-  - discouraged_optional_boolean             # `Bool?` is almost always a code smell
-  - discouraged_optional_collection          # Empty collection beats `nil` collection
   - empty_collection_literal                 # `arr == []` → `arr.isEmpty`
   - empty_count                              # `.count == 0` → `.isEmpty`
   - empty_string                             # `s == ""` → `s.isEmpty`
@@ -56,7 +54,6 @@ opt_in_rules:
   - first_where                              # `first(where:)` over `filter { }.first`
   - flatmap_over_map_reduce                  # `flatMap` over `map(...).reduce([], +)`
   - force_unwrapping                         # No `!` outside compile-time constants
-  - function_default_parameter_at_end        # Defaults belong at the end of the parameter list
   - identical_operands                       # `x == x` is a bug
   - implicitly_unwrapped_optional            # No `Foo!` types
   - joined_default_parameter                 # `.joined()` not `.joined(separator: "")`
@@ -135,6 +132,8 @@ disabled_rules:
 #   attributes                         # Forces specific placement of @attributes
 #   anonymous_argument_in_multiline_closure  # Bans $0 in multi-line closures — too aggressive
 #   conditional_returns_on_newline     # Style preference, not a guideline
+#   discouraged_optional_boolean       # The hub omits fields; `nil` means absent, not `false`
+#   discouraged_optional_collection    # Same: absent and empty differ (payloads, nothing saved yet)
 #   expiring_todo                      # Project-specific workflow
 #   explicit_acl                       # We default to `internal`; mandatory ACL is noise
 #   explicit_enum_raw_value            # Often the inferred raw value is fine
@@ -144,6 +143,7 @@ disabled_rules:
 #   file_header                        # No license header policy in this project
 #   file_name                          # Enforced by convention, not lint
 #   file_types_order                   # Style preference
+#   function_default_parameter_at_end  # Inits follow the hub's field order; fixtures read `key:` before `value:`
 #   ibinspectable_in_extension         # No Interface Builder
 #   implicit_return                    # Both styles are idiomatic
 #   indentation_width                  # Xcode handles indentation
@@ -199,9 +199,10 @@ function_body_length:
   warning: 60
   error: 120
 
+# Same limits as function_body_length: in SwiftUI the builder closure is the body.
 closure_body_length:
-  warning: 30
-  error: 60
+  warning: 60
+  error: 120
 
 type_body_length:
   warning: 300

@@ -136,12 +136,15 @@ struct RegistrationStatusView: View {
         switch request.status {
         case .pending:
             cancelButton(viewModel)
+
         case .approved:
             createAccountButton
+
         case .rejected:
             if !request.blocked {
                 resubmitButton
             }
+
         case .cancelled:
             resubmitButton
         }

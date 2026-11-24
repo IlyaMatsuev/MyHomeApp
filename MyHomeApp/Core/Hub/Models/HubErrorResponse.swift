@@ -14,9 +14,3 @@ struct HubErrorResponse: Sendable, Decodable {
     let details: HubErrorDetails
     let statusCode: Int
 }
-
-extension HubErrorResponse {
-    var firstError: HubErrorEntry {
-        details.errors.first!
-    }
-}

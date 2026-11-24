@@ -32,18 +32,7 @@ struct AddEditServerSheet: View {
             ZStack {
                 Color("BackgroundPrimary").ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: 20) {
-                        labelField
-                        urlField
-                        remoteToggle
-                        tip
-                        errorText
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 24)
-                }
-                .scrollDismissesKeyboard(.interactively)
+                form
             }
             .navigationTitle(mode.title)
             .navigationBarTitleDisplayMode(.inline)
@@ -66,48 +55,62 @@ struct AddEditServerSheet: View {
         }
     }
 
-    private var labelField: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Label")
-                .font(.footnote)
-                .foregroundStyle(Color("TextSecondary"))
+    private var form: some View {
+        List {
+            Group {
+                Section {
+                    labelField
+                } header: {
+                    Text("Label").foregroundStyle(Color("TextSecondary"))
+                }
 
-            HStack(spacing: 0) {
-                TextField("My Home", text: $server.label)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .padding(.horizontal, 12)
+                Section {
+                    addressField
+                } header: {
+                    Text("Server address").foregroundStyle(Color("TextSecondary"))
+                } footer: {
+                    Text("Include the port if your server uses one (e.g. :8080).")
+                        .foregroundStyle(Color("TextSecondary"))
+                }
+
+                Section {
+                    remoteToggle
+                } footer: {
+                    Label(tipText, systemImage: server.remote ? "globe" : "wifi")
+                        .foregroundStyle(Color("TextSecondary"))
+                }
+
+                Section {
+                    advancedSettings
+                }
             }
-            .frame(minHeight: 48)
-            .background(Color("BackgroundSecondary"))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .listRowBackground(Color("BackgroundSecondary"))
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+        .disabled(loading)
+        .safeAreaInset(edge: .bottom) { errorText }
     }
 
-    private var urlField: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Server address")
-                .font(.footnote)
-                .foregroundStyle(Color("TextSecondary"))
+    private var labelField: some View {
+        TextField("My Home", text: $server.label)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+    }
 
-            HStack(spacing: 0) {
-                schemePicker
-                Divider().frame(height: 24)
-                TextField("192.168.1.10:8080", text: $server.address)
-                    .textContentType(.URL)
-                    .keyboardType(.URL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .padding(.horizontal, 12)
-            }
-            .frame(minHeight: 48)
-            .background(Color("BackgroundSecondary"))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-
-            Text("Include the port if your server uses one (e.g. :8080).")
-                .font(.caption2)
-                .foregroundStyle(Color("TextSecondary"))
+    private var addressField: some View {
+        HStack(spacing: 0) {
+            schemePicker
+            Divider().frame(height: 24)
+            TextField("192.168.1.10:8080", text: $server.address)
+                .textContentType(.URL)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .padding(.leading, 12)
         }
+        .listRowInsets(.vertical, 4)
     }
 
     private var schemePicker: some View {
@@ -125,8 +128,8 @@ struct AddEditServerSheet: View {
                     .font(.caption2)
             }
             .foregroundStyle(Color("TextPrimary"))
-            .padding(.horizontal, 14)
-            .frame(maxHeight: .infinity)
+            .padding(.trailing, 14)
+            .frame(minHeight: 44)
         }
     }
 
@@ -141,10 +144,28 @@ struct AddEditServerSheet: View {
             }
         }
         .tint(Color("AccentPrimary"))
-        .padding()
-        .background(Color("BackgroundSecondary"))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .disabled(loading)
+    }
+
+    private var advancedSettings: some View {
+        DisclosureGroup("Advanced settings") {
+            ForEach($server.headers) { $header in
+                VStack(spacing: 8) {
+                    FormTextField(title: "Name", placeholder: "Header name", text: $header.name, isMonospaced: true)
+                    FormTextField(
+                        title: "Value",
+                        placeholder: "Header value",
+                        text: $header.value,
+                        isMonospaced: true,
+                        isSecure: true
+                    )
+                }
+                .keyboardType(.asciiCapable)
+            }
+            .onDelete(perform: viewModel.removeHeaders)
+
+            Button("Add header", systemImage: "plus", action: viewModel.addHeader)
+                .foregroundStyle(Color("AccentPrimary"))
+        }
     }
 
     @ViewBuilder
@@ -156,19 +177,10 @@ struct AddEditServerSheet: View {
             }
             .foregroundStyle(Color("Danger"))
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+            .background(Color("BackgroundPrimary"))
         }
-    }
-
-    private var tip: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: server.remote ? "globe" : "wifi")
-            Text(tipText).font(.footnote)
-        }
-        .foregroundStyle(Color("TextSecondary"))
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color("BackgroundSecondary"))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private var tipText: String {
@@ -178,4 +190,10 @@ struct AddEditServerSheet: View {
             "Make sure your phone is connected to the same Wi-Fi network as the server."
         }
     }
+}
+
+#Preview {
+    @Previewable @State var viewModel = AppContainer.preview().build().buildServerSetupViewModel(mode: .edit)
+
+    AddEditServerSheet(viewModel: viewModel, mode: .edit, server: $viewModel.draftServer)
 }

@@ -5,10 +5,8 @@ final class TestURLProtocol: URLProtocol, @unchecked Sendable {
 
     nonisolated(unsafe) static var handler: Handler?
 
-    // swiftlint:disable:next static_over_final_class
-    override class func canInit(with request: URLRequest) -> Bool { true }
-    // swiftlint:disable:next static_over_final_class
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override static func canInit(with _: URLRequest) -> Bool { true }
+    override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
         guard let handler = Self.handler else {
@@ -17,6 +15,12 @@ final class TestURLProtocol: URLProtocol, @unchecked Sendable {
         }
         do {
             let (response, data) = try handler(request)
+            if response.statusCode == 302, let location = response.value(forHTTPHeaderField: "Location") {
+                var redirected = request
+                redirected.url = URL(string: location)
+                client?.urlProtocol(self, wasRedirectedTo: redirected, redirectResponse: response)
+                return
+            }
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
             client?.urlProtocol(self, didLoad: data)
             client?.urlProtocolDidFinishLoading(self)

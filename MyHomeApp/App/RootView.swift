@@ -46,10 +46,13 @@ struct RootView: View {
         switch displayStage {
         case .loading:
             ProgressView()
+
         case .serverSetup:
             ServerSetupView()
+
         case .login:
             LoginView()
+
         case .main:
             ContentView()
         }

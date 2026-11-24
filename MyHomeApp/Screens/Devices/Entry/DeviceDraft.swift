@@ -11,7 +11,6 @@ struct DeviceDraft: Equatable {
     var room: DeviceRoom
     var transportProtocol: TransportProtocol
 
-    // swiftlint:disable:next identifier_name
     var ip: String
     var updateInterval: String
 

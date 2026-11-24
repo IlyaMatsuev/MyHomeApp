@@ -8,7 +8,6 @@ struct DeviceUpdatePayload: Encodable, Equatable {
     var brand: DeviceBrand?
     var room: DeviceRoom?
     var transportProtocol: TransportProtocol?
-    // swiftlint:disable:next identifier_name
     var ip: String?
     var updateInterval: Int?
     var tuyaDeviceId: String?

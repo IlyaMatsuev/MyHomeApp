@@ -5,6 +5,12 @@ struct Server: Codable, Equatable, Sendable, Identifiable {
     var scheme: AddressScheme
     var address: String
     var remote: Bool
+    var headers: [ServerHeader] = []
+
+    // `headers` is left out on purpose: values are secrets and live in the Keychain, not UserDefaults.
+    private enum CodingKeys: String, CodingKey {
+        case label, scheme, address, remote
+    }
 
     var id: String {
         address

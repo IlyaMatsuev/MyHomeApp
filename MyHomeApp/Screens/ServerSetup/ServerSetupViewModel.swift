@@ -8,6 +8,7 @@ final class ServerSetupViewModel {
     private static let duplicateAddressError = "You already have a server with the same address."
     private static let invalidHostAddressError = "Enter a valid address. Example: 192.168.1.10:8080"
     private static let serverUnreachableError = "Couldn't connect to the server."
+    private static let invalidHeaderNameError = "Enter a valid header name. Example: X-Proxy-Key"
     private static let defaultLabel = "Home"
     private static let serverTemplate = Server(.https, "", remote: false, label: defaultLabel)
 
@@ -73,9 +74,20 @@ final class ServerSetupViewModel {
         errorMessage = nil
     }
 
+    func addHeader() {
+        draftServer.headers.append(ServerHeader())
+    }
+
+    func removeHeaders(at offsets: IndexSet) {
+        for index in offsets.sorted(by: >) where draftServer.headers.indices.contains(index) {
+            draftServer.headers.remove(at: index)
+        }
+    }
+
     func saveDraft() async {
         guard canSaveDraft else {
-            return draftErrorMessage = Self.invalidHostAddressError
+            draftErrorMessage = Self.invalidHostAddressError
+            return
         }
 
         errorMessage = nil
@@ -83,22 +95,32 @@ final class ServerSetupViewModel {
         defer { loading = false }
 
         if servers.contains(where: { $0.label == draftServer.label && $0.id != editingServerId }) {
-            return draftErrorMessage = Self.duplicateLabelError
+            draftErrorMessage = Self.duplicateLabelError
+            return
         }
         if servers.contains(where: { $0.id == draftServer.id && $0.id != editingServerId }) {
-            return draftErrorMessage = Self.duplicateAddressError
+            draftErrorMessage = Self.duplicateAddressError
+            return
         }
 
-        let reachable = await store.isReachable(draftServer)
+        var server = draftServer
+        server.headers = server.headers.map(\.trimmed).filter { !$0.isBlank }
+        if let message = headersError(in: server.headers) {
+            draftErrorMessage = message
+            return
+        }
+
+        let reachable = await store.isReachable(server)
 
         if !reachable {
-            return draftErrorMessage = Self.serverUnreachableError
+            draftErrorMessage = Self.serverUnreachableError
+            return
         }
 
         if let originalId = editingServerId, let index = servers.firstIndex(where: { $0.id == originalId }) {
-            servers[index] = draftServer
+            servers[index] = server
         } else {
-            servers.append(draftServer)
+            servers.append(server)
         }
         closeServerForm()
     }
@@ -115,5 +137,24 @@ final class ServerSetupViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func headersError(in headers: [ServerHeader]) -> String? {
+        var names: Set<String> = []
+        for header in headers {
+            if !header.hasValidName {
+                return Self.invalidHeaderNameError
+            }
+            if header.isReserved {
+                return "The header \"\(header.name)\" is set by the app and can't be changed."
+            }
+            if !header.hasValidValue {
+                return "Enter a valid value for the header \"\(header.name)\"."
+            }
+            if !names.insert(header.name.lowercased()).inserted {
+                return "You already have a header named \"\(header.name)\"."
+            }
+        }
+        return nil
     }
 }
