@@ -33,6 +33,7 @@ final class StubMyHomeAPIClient: MyHomeAPIClient, @unchecked Sendable {
         switch response {
         case .data(let data):
             return try JSONDecoder().decode(T.self, from: data)
+
         case .error(let error):
             throw error
         }

@@ -13,7 +13,6 @@ struct DeviceConfigItem: Codable, Hashable, Identifiable {
     let path: String?
     let required: Bool?
     let constraints: DeviceConfigItemConstraints?
-    // swiftlint:disable:next discouraged_optional_collection
     let values: [DeviceConfigItemOption]?
     let defaultValue: AnyCodable?
 
@@ -27,7 +26,6 @@ struct DeviceConfigItem: Codable, Hashable, Identifiable {
         path: String? = nil,
         required: Bool? = nil,
         constraints: DeviceConfigItemConstraints? = nil,
-        // swiftlint:disable:next discouraged_optional_collection
         values: [DeviceConfigItemOption]? = nil,
         defaultValue: AnyCodable? = nil
     ) {

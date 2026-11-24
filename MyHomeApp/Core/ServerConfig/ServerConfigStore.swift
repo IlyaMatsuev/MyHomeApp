@@ -55,11 +55,10 @@ final class ServerConfigStore: ServerProvider {
         if servers.isEmpty {
             state = .unconfigured
             throw ServerConfigError.emptyList
-        } else {
-            try persistence.save(servers)
-            state = .configured(servers)
-            selectedServer = servers.first { $0.id == selectedServer?.id } ?? servers.first
         }
+        try persistence.save(servers)
+        state = .configured(servers)
+        selectedServer = servers.first { $0.id == selectedServer?.id } ?? servers.first
     }
 
     func clear() async throws {

@@ -50,7 +50,7 @@ that found it when it helps the author judge it.
 ### 1. Code Style
 
 Don't re-check what SwiftLint already enforces — indentation, trailing whitespace, final newline, force
-unwraps, force casts, `print(...)`. `.swiftlint.yaml` covers those, the build runs it, and the `Stop` hook
+unwraps, force casts, `print(...)`. `.swiftlint.yml` covers those, the build runs it, and the `Stop` hook
 blocks the turn on an error, so a finding there is noise. Check only what a linter can't see:
 
 - [ ] One primary type per file; filename matches the type

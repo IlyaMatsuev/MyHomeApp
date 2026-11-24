@@ -125,16 +125,22 @@ final class HubAPIClient: MyHomeAPIClient, Sendable {
         case 400:
             let errorResponse = try decodeValidationResponse(data)
             throw HubAPIError.validation(errorResponse.firstError.path, errorResponse.firstError.message)
+
         case 401:
             throw HubAPIError.unauthorized
+
         case 403:
             throw HubAPIError.forbidden
+
         case 404:
             throw HubAPIError.notFound
+
         case 409:
             throw HubAPIError.conflict
+
         case 429:
             throw HubAPIError.tooManyRequests
+
         default:
             throw HubAPIError.unexpected
         }

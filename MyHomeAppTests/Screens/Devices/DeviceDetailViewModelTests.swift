@@ -67,7 +67,8 @@ struct DeviceDetailViewModelTests {
         )
 
         let text = try #require(viewModel.commandItems.first)
-        #expect(DeviceConfigValue.string(viewModel.commandValue(of: text)) == "")
+        let draft = try #require(DeviceConfigValue.string(viewModel.commandValue(of: text)))
+        #expect(draft.isEmpty)
     }
 
     // MARK: - Details
@@ -171,7 +172,7 @@ struct DeviceDetailViewModelTests {
     // MARK: - Controls
     @Test
     func aControlUpdateKeepsTheDetailsTheUserIsStillTyping() async throws {
-        service.updateControlsResult = { _ in .success(self.device) }
+        service.updateControlsResult = { _ in .success(device) }
         let viewModel = makeViewModel()
         let brightness = try #require(viewModel.controlItems.first { $0.name == "brightness" })
 
@@ -184,7 +185,7 @@ struct DeviceDetailViewModelTests {
 
     @Test
     func committingAControlSendsOnlyThatControl() async throws {
-        service.updateControlsResult = { _ in .success(self.device) }
+        service.updateControlsResult = { _ in .success(device) }
         let viewModel = makeViewModel()
         let brightness = try #require(viewModel.controlItems.first { $0.name == "brightness" })
 

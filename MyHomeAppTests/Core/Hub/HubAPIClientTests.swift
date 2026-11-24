@@ -2,8 +2,6 @@ import Foundation
 import Testing
 @testable import MyHomeApp
 
-// swiftlint:disable file_length
-
 @Suite(.serialized)
 @MainActor
 // swiftlint:disable:next type_body_length
@@ -12,16 +10,16 @@ struct HubAPIClientTests {
         let name: String
     }
 
-    private nonisolated static let server = Server(.http, "hub.local:8080", label: "Test Hub")
-    private nonisolated static let proxiedServer = server.withHeaders(
+    nonisolated private static let server = Server(.http, "hub.local:8080", label: "Test Hub")
+    nonisolated private static let proxiedServer = server.withHeaders(
         ServerHeader(name: "X-Proxy-Key", value: "s3cr3t"),
         ServerHeader(name: "X-Tenant", value: "home")
     )
-    private nonisolated static let token = AuthToken.fixture(accessToken: "test-token")
+    nonisolated private static let token = AuthToken.fixture(accessToken: "test-token")
 
     private static func makeClient(
-        server: Server? = HubAPIClientTests.server,
-        token: AuthToken? = HubAPIClientTests.token,
+        server: Server? = Self.server,
+        token: AuthToken? = Self.token,
         handler: @escaping TestURLProtocol.Handler
     ) -> HubAPIClient {
         let context = HubAPIContext()
@@ -36,7 +34,7 @@ struct HubAPIClientTests {
         HubAPIClient(context: context, session: .testSession(handler: handler))
     }
 
-    private nonisolated static func okResponse(
+    nonisolated private static func okResponse(
         for request: URLRequest,
         body: Data = Data()
     ) -> (HTTPURLResponse, Data) {
@@ -46,7 +44,7 @@ struct HubAPIClientTests {
         return (response, body)
     }
 
-    private nonisolated static func response(
+    nonisolated private static func response(
         for request: URLRequest,
         status: Int,
         body: Data = Data()
@@ -420,8 +418,8 @@ struct HubAPIClientTests {
         let captured = CapturedRequest()
         let calls = RequestCounter()
         let auth = StubAuthProvider(sessionToken: AuthToken.fixture(accessToken: "old"))
-        auth.refreshHandler = { [unowned auth] in
-            auth.sessionToken = AuthToken.fixture(accessToken: "new")
+        auth.refreshHandler = { [weak auth] in
+            auth?.sessionToken = AuthToken.fixture(accessToken: "new")
             return true
         }
         let context = HubAPIContext()
@@ -558,7 +556,7 @@ struct HubAPIClientTests {
 
     // MARK: - helpers
 
-    private nonisolated static func encode<T: Encodable>(_ value: T) throws -> Data {
+    nonisolated private static func encode<T: Encodable>(_ value: T) throws -> Data {
         try JSONEncoder().encode(value)
     }
 }
@@ -569,7 +567,7 @@ private final class CapturedRequest: @unchecked Sendable {
 
 private final class RequestCounter: @unchecked Sendable {
     private(set) var count: Int = 0
-    func append(_ request: URLRequest) { count += 1 }
+    func append(_: URLRequest) { count += 1 }
 }
 
 private extension URLRequest {

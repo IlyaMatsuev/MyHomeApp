@@ -174,7 +174,7 @@ If `iPhone 13 mini` isn't available, check `xcrun simctl list devices available`
 
 ## Linting
 
-[SwiftLint](https://github.com/realm/SwiftLint) is configured via `.swiftlint.yaml` at the repo root. An
+[SwiftLint](https://github.com/realm/SwiftLint) is configured via `.swiftlint.yml` at the repo root. An
 SPM build-tool plugin runs it during every `xcodebuild build`, so the build already surfaces lint warnings
 inline — but run `swiftlint` from the repo root as its own step anyway, so you see the full result rather
 than whatever the build log happened to print (see Build & test — part of the mandatory pre-report checks).
@@ -284,7 +284,7 @@ loader/screen split + routers). Don't run a fit check, a selection guide or a "D
 
 - Don't add comments that restate the code (`// Increment counter` above `counter += 1`) — see the comment rule under Coding rules.
 - Don't create planning / decision docs unless explicitly asked.
-- Don't add files to the Xcode project that should not be compiled (`README.md`, `.gitignore`, `.swiftlint.yaml`, `LICENSE`). Either leave them out of the project entirely or add them with **all target memberships unchecked**.
+- Don't add files to the Xcode project that should not be compiled (`README.md`, `.gitignore`, `.swiftlint.yml`, `LICENSE`). Either leave them out of the project entirely or add them with **all target memberships unchecked**.
 - Don't refactor unrelated code while fixing a bug. Keep changes scoped to the request.
 
 ## Git

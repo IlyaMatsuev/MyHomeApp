@@ -5,10 +5,8 @@ final class TestURLProtocol: URLProtocol, @unchecked Sendable {
 
     nonisolated(unsafe) static var handler: Handler?
 
-    // swiftlint:disable:next static_over_final_class
-    override class func canInit(with request: URLRequest) -> Bool { true }
-    // swiftlint:disable:next static_over_final_class
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override static func canInit(with _: URLRequest) -> Bool { true }
+    override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
         guard let handler = Self.handler else {

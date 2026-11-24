@@ -77,7 +77,7 @@ UI tests live in `MyHomeAppUITests/` and use XCTest / XCUITest.
 
 ## Linting
 
-[SwiftLint](https://github.com/realm/SwiftLint) runs automatically during builds via a Swift Package build-tool plugin and surfaces warnings inline in Xcode. Configuration is `.swiftlint.yaml` at the repo root. To run it as its own step, which is what CI and the pre-commit check do:
+[SwiftLint](https://github.com/realm/SwiftLint) runs automatically during builds via a Swift Package build-tool plugin and surfaces warnings inline in Xcode. Configuration is `.swiftlint.yml` at the repo root. To run it as its own step, which is what CI and the pre-commit check do:
 
 ```bash
 # Lint the whole project

@@ -16,7 +16,8 @@ extension ScenarioGroupSection: Comparable {
         case (nil, nil): return false
         case (nil, _): return true
         case (_, nil): return false
-        case (let lhsGroup?, let rhsGroup?):
+
+        case let (lhsGroup?, rhsGroup?):
             return lhsGroup.localizedCaseInsensitiveCompare(rhsGroup) == .orderedAscending
         }
     }

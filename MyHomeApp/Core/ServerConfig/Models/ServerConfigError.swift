@@ -15,13 +15,14 @@ enum ServerConfigError: LocalizedError, Equatable {
         }
     }
 
-    static func == (lhs: ServerConfigError, rhs: ServerConfigError) -> Bool {
+    static func == (lhs: Self, rhs: Self) -> Bool {
         switch (lhs, rhs) {
         case (.emptyList, .emptyList),
              (.headersUnreadable, .headersUnreadable),
              (.encoding, .encoding),
              (.decoding, .decoding):
             true
+
         default: false
         }
     }

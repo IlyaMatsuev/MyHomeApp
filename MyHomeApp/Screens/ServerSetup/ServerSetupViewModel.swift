@@ -86,7 +86,8 @@ final class ServerSetupViewModel {
 
     func saveDraft() async {
         guard canSaveDraft else {
-            return draftErrorMessage = Self.invalidHostAddressError
+            draftErrorMessage = Self.invalidHostAddressError
+            return
         }
 
         errorMessage = nil
@@ -94,22 +95,26 @@ final class ServerSetupViewModel {
         defer { loading = false }
 
         if servers.contains(where: { $0.label == draftServer.label && $0.id != editingServerId }) {
-            return draftErrorMessage = Self.duplicateLabelError
+            draftErrorMessage = Self.duplicateLabelError
+            return
         }
         if servers.contains(where: { $0.id == draftServer.id && $0.id != editingServerId }) {
-            return draftErrorMessage = Self.duplicateAddressError
+            draftErrorMessage = Self.duplicateAddressError
+            return
         }
 
         var server = draftServer
         server.headers = server.headers.map(\.trimmed).filter { !$0.isBlank }
         if let message = headersError(in: server.headers) {
-            return draftErrorMessage = message
+            draftErrorMessage = message
+            return
         }
 
         let reachable = await store.isReachable(server)
 
         if !reachable {
-            return draftErrorMessage = Self.serverUnreachableError
+            draftErrorMessage = Self.serverUnreachableError
+            return
         }
 
         if let originalId = editingServerId, let index = servers.firstIndex(where: { $0.id == originalId }) {

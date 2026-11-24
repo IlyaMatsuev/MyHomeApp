@@ -2,8 +2,6 @@ import Foundation
 import Testing
 @testable import MyHomeApp
 
-// swiftlint:disable file_length
-
 @MainActor
 // swiftlint:disable:next type_body_length
 struct ServerSetupViewModelTests {
@@ -34,7 +32,7 @@ struct ServerSetupViewModelTests {
     @Test
     func draftServerStartsWithTemplateValues() {
         #expect(viewModel.draftServer.scheme == .https)
-        #expect(viewModel.draftServer.address == "")
+        #expect(viewModel.draftServer.address.isEmpty)
         #expect(viewModel.draftServer.label == "Home")
         #expect(!viewModel.draftServer.remote)
     }
@@ -75,7 +73,7 @@ struct ServerSetupViewModelTests {
         #expect(viewModel.isServerFormOpen)
         #expect(viewModel.addingNewServer)
         #expect(viewModel.draftServer.scheme == .https)
-        #expect(viewModel.draftServer.address == "")
+        #expect(viewModel.draftServer.address.isEmpty)
         #expect(viewModel.draftServer.label == "Home")
         #expect(!viewModel.draftServer.remote)
     }
@@ -129,7 +127,7 @@ struct ServerSetupViewModelTests {
         viewModel.showAddServerForm()
 
         #expect(viewModel.draftServer.scheme == .https)
-        #expect(viewModel.draftServer.address == "")
+        #expect(viewModel.draftServer.address.isEmpty)
         #expect(viewModel.draftServer.label == "Home")
         #expect(!viewModel.draftServer.remote)
     }

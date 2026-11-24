@@ -10,7 +10,6 @@ struct Device: Codable, Identifiable, Hashable {
     let room: DeviceRoom
 
     let transportProtocol: TransportProtocol
-    // swiftlint:disable:next identifier_name
     let ip: String?
     let updateInterval: Int?
 
@@ -22,9 +21,7 @@ struct Device: Codable, Identifiable, Hashable {
 
     // TODO: Make controls "let"
     // "controls" and "measurements" might come undefined or empty
-    // swiftlint:disable:next discouraged_optional_collection
     var controls: [String: AnyCodable]?
-    // swiftlint:disable:next discouraged_optional_collection
     let measurements: [String: AnyCodable]?
 
     /// Only present on the devices listing, which the app requests with `includeConfig=true`.
@@ -83,9 +80,7 @@ extension Device {
     }
 
     private static func items(
-        // swiftlint:disable:next discouraged_optional_collection
         declared: [DeviceConfigItem]?,
-        // swiftlint:disable:next discouraged_optional_collection
         storedIn payload: [String: AnyCodable]?
     ) -> [DeviceConfigItem] {
         if let declared, !declared.isEmpty {

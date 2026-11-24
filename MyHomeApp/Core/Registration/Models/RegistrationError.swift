@@ -19,7 +19,7 @@ enum RegistrationError: LocalizedError, Equatable {
         }
     }
 
-    static func == (lhs: RegistrationError, rhs: RegistrationError) -> Bool {
+    static func == (lhs: Self, rhs: Self) -> Bool {
         switch (lhs, rhs) {
         case (.alreadyRequested, .alreadyRequested),
              (.requestNotFound, .requestNotFound),
@@ -28,6 +28,7 @@ enum RegistrationError: LocalizedError, Equatable {
              (.decoding, .decoding),
              (.unexpected, .unexpected):
             true
+
         default: false
         }
     }

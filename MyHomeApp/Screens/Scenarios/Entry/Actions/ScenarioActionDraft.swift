@@ -30,7 +30,7 @@ struct ScenarioActionDraft: Identifiable, Hashable {
     }
 
     init(action: ScenarioAction) {
-        let control = action.set.controls.sorted { $0.key < $1.key }.first
+        let control = action.set.controls.min { $0.key < $1.key }
         self.init(
             deviceId: action.externalId,
             controlKey: control?.key ?? Self.defaultControlKey,

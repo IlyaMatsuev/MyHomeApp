@@ -163,7 +163,7 @@ struct MockDeviceService: DeviceService {
         return Self.applying(payload, to: device)
     }
 
-    func sendCommand(deviceId: String, command: [String: AnyCodable]) async throws -> Device {
+    func sendCommand(deviceId: String, command _: [String: AnyCodable]) async throws -> Device {
         let device = try Self.device(withId: deviceId)
         try await Task.sleep(for: operationDelay)
         return device

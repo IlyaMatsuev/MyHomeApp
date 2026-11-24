@@ -107,8 +107,12 @@ struct FormTextField: View {
     return VStack(spacing: 16) {
         FormTextField(title: "Name", placeholder: "Office table LED", text: $name)
         FormTextField(title: "Tuya local key", placeholder: "a1b2c3...", text: $key, isSecure: true)
-        FormTextField(title: "IP address", placeholder: "192.168.0.10", text: .constant("nope"),
-                      error: "Must be a valid IPv4 address.")
+        FormTextField(
+            title: "IP address",
+            placeholder: "192.168.0.10",
+            text: .constant("nope"),
+            error: "Must be a valid IPv4 address."
+        )
     }
     .padding()
     .background(Color("BackgroundSecondary"))
