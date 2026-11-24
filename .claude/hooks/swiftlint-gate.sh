@@ -4,9 +4,14 @@
 # because a pre-existing warning would otherwise wedge every turn.
 set -uo pipefail
 
-cd "${CLAUDE_PROJECT_DIR:-.}" 2>/dev/null || exit 0
-
 payload=$(cat 2>/dev/null || true)
+
+# In a worktree CLAUDE_PROJECT_DIR can still name the main checkout, so lint where the session actually is.
+cwd=$(printf '%s' "$payload" | plutil -extract cwd raw -o - - 2>/dev/null) || cwd=""
+root=$(git -C "${cwd:-.}" rev-parse --show-toplevel 2>/dev/null) || root=""
+# Session wandered into a sibling repo: fall back to the project.
+[ -f "$root/.swiftlint.yml" ] || root="${CLAUDE_PROJECT_DIR:-.}"
+cd "$root" 2>/dev/null || exit 0
 
 # Already re-entered after this hook blocked once: let the turn end instead of looping.
 case "$payload" in

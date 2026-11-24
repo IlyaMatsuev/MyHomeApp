@@ -14,23 +14,29 @@ Write tests for my recent code changes, then have them reviewed.
 - **If it's empty**, default to my recent changes: the last commit plus any uncommitted working-tree
   changes (`git show HEAD` and `git diff`).
 
-Then read the actual change before dispatching anything, and state in one line what you resolved the scope
+Don't create a worktree when the scope includes uncommitted changes: they exist only in this checkout.
+Otherwise follow [CLAUDE.md § Worktrees](../../CLAUDE.md#worktrees).
+
+Then read the actual change before writing anything, and state in one line what you resolved the scope
 to and which files it covers. Derive that file list from the resolved scope — for the empty-scope default
 that's `git diff --name-only HEAD~1` (last commit through the working tree), but for an explicit scope it's
 whatever files that scope names.
 
-## 2. Dispatch `tester`
+If the scope is ambiguous, or the intended behaviour isn't clear enough to assert (bug or feature?), ask me
+now — all questions at once, each with your recommended answer — and wait. Otherwise proceed.
 
-Pass it: the resolved scope, the file list, and what behaviour changed. Tell it to:
+## 2. Write the tests
+
+Write them yourself, following [../guides/testing.md](../guides/testing.md):
 
 - **Validate the production code first.** Read the diff and confirm the code is correct before writing
   tests. Flag anything that looks wrong in the final report.
-- **Not pause for confirmation before writing the tests.** Make a reasonable judgment call and proceed.
-- **Not change production code.** Only add or modify files under `MyHomeAppTests/`. The one case to stop
+- **Don't pause for confirmation before writing.** Requirements were settled in §1. If intended
+  behaviour still turns out to be unclear, ask instead of pinning a guess.
+- **Don't change production code.** Only add or modify files under `MyHomeAppTests/`. The one case to stop
   and ask about is a test that genuinely cannot be written without a production change (e.g. a service
   isn't behind a protocol) — ask rather than reshaping production code to suit a test.
-- **Match the existing test style and structure** in the affected test files, and follow the Tester
-  workflow in [../agents/tester.md](../agents/tester.md).
+- **Match the existing test style and structure** in the affected test files.
 - **Keep XCTest out of the unit target.** New unit tests are Swift Testing; `MyHomeAppUITests/` stays
   XCTest.
 - Move or rename tests alongside anything the implementation moved or renamed, instead of duplicating.
@@ -38,6 +44,9 @@ Pass it: the resolved scope, the file list, and what behaviour changed. Tell it 
   reporting.
 
 ## 3. Dispatch `reviewer` — scoped to the tests
+
+Pass it the absolute path to work in, the resolved scope and file list, the intended behaviour with my
+answers, and the UnitTests result so it doesn't rerun them.
 
 The reviewer's checklist is written for production code, so **tell it explicitly what to look at here**,
 and that most of its sections do not apply:

@@ -1,21 +1,12 @@
----
-name: implementer
-description: Writes production Swift and SwiftUI code for the MyHomeApp iOS client, following an Architect plan and the project's loader/screen, AppContainer DI, router and error-channel conventions. Use when implementing a feature, screen, service, store or model, or fixing a bug in Swift code. Runs the build and SwiftLint before reporting done.
----
+# Implementing guide
 
-# Implementer Agent
-
-You are the Implementer - a coding agent that implements features based on Architect's plans for the MyHomeApp project.
-
-## Your Role
-
-Write production-quality Swift code following the implementation plan provided by the Architect. You focus on writing clean, idiomatic, maintainable code that follows project conventions and scales as the app grows.
+Write clean, idiomatic, maintainable Swift that follows the project conventions and scales as the app grows.
 
 When a feature needs generic UI infrastructure (toasts, popups, charts, image loading, keychain wrappers, etc.), **prefer a well-maintained SPM library over rolling your own**. Reserve custom code for project-specific logic — services, models, screens, business rules. See [CLAUDE.md](../../CLAUDE.md) for the project's stance on dependencies.
 
 ## Skills to use
 
-- **`ponytail:ponytail`** — before writing a file, check the plan's scope against what already exists here:
+- **`ponytail:ponytail`** — before writing a file, check the scope against what already exists here:
   a `Shared/Components/` view, an existing service method, a store that already holds the state. Write the
   minimum that fully works, including the callers, previews and fixtures your change breaks. But follow the
   project convention even when a one-off would be shorter — CLAUDE.md's "consistency beats a smaller diff"
@@ -337,7 +328,8 @@ Place in `Shared/Components/`. They should be pure SwiftUI views with no busines
 ## Implementation Guidelines
 
 1. **Read existing code first** — open the nearest screen folder and match the style.
-2. **Follow the plan** — implement exactly what Architect specified. If you spot a problem, flag it instead of silently changing scope.
+2. **Follow the plan** — where there is one. If it turns out wrong, say so and adjust; never silently change scope. If it needs a
+   decision the requirements don't settle, stop and ask, with a recommendation.
 3. **One task at a time** — complete each task fully before moving on.
 4. **Mind concurrency** — annotate ViewModels with `@MainActor` when they publish UI state. Keep network work off the main actor where possible.
 5. **Handle errors** — surface them through `state` or `Result`, not by crashing. Never use `try!` in production code paths.
@@ -353,4 +345,4 @@ Place in `Shared/Components/`. They should be pure SwiftUI views with no busines
 - Keep public surface minimal — default to `internal`; `private` for helpers; `public` only when crossing
   a module boundary.
 - **Run the build and lint gate from [CLAUDE.md § Build & test](../../CLAUDE.md#build--test) before
-  reporting done, and report the real result.** Don't run the tests — that's the Tester's step.
+  reporting done, and report the real result.** Tests come next: [testing.md](testing.md).

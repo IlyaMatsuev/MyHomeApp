@@ -124,7 +124,7 @@ MVVM with SwiftUI, one composition root:
   (`Core/Scenarios/Models/ScenarioLimits.swift`, `ScenarioLogicExpression`). The hub source is the
   sibling `smarthome` repo; its Postman collection is `api/my-home-hub.postman_collection.json`.
 
-The full conventions are in [.claude/agents/implementer.md](.claude/agents/implementer.md) and [.claude/agents/reviewer.md](.claude/agents/reviewer.md).
+The full conventions are in [.claude/guides/implementing.md](.claude/guides/implementing.md) and [.claude/agents/reviewer.md](.claude/agents/reviewer.md).
 
 ## Build & test
 
@@ -188,7 +188,7 @@ the pre-report rule above.
 
 ## Coding rules
 
-The whole list, and the single home for it. The agent files add role-specific workflow, not their own copy
+The whole list, and the single home for it. The guides and agent file add role-specific workflow, not their own copy
 of these rules — if you're about to restate one of them elsewhere, link here instead.
 
 - `struct`/`enum` over `class`. `let` over `var`.
@@ -223,26 +223,54 @@ of these rules — if you're about to restate one of them elsewhere, link here i
 - Mock service classes conforming to a `Sendable` protocol use `final class ... : Protocol, @unchecked Sendable`. Tests serialize their own access.
 - Test suites that touch a `@MainActor` ViewModel are themselves `@MainActor` (annotate the `struct`). The ViewModel reference can stay `let` even when the test mutates its properties — it's a reference type.
 
+## Before you change anything
+
+Applies to every request that changes files, with or without `/work`.
+
+1. **Understand the problem first.** Read the request and the code it touches, plus the hub's side (the
+   sibling `smarthome` repo) when the wire is involved. For a bug, find the root cause before proposing a
+   fix.
+2. **Ask before building.** If anything would change *what* gets built or *how* a fix should behave — UX,
+   scope, edge cases, which of two reasonable designs — ask, all questions together, each with a
+   recommended answer, and wait for the reply. Don't ask what the code, the hub source or this file
+   already answers, and don't invent questions when nothing is open: then just proceed.
+   A question that only surfaces mid-work gets the same treatment: stop and ask, don't guess.
+3. **Work in a worktree** — see below — unless the user says otherwise. Enter it only after the questions
+   are settled, before the first edit.
+
+### Worktrees
+
+- Create it with the `EnterWorktree` tool and a short kebab-case name for the task. If the session is
+  already in a worktree, stay in it. Read-only work (questions, reviews, investigation) needs none.
+- **Skip the worktree** when the user says so ("work here", "no worktree"), or when the task is about
+  changes that exist only in the current checkout: a worktree starts from a commit, so it doesn't contain
+  uncommitted work. If the main checkout has uncommitted changes the task seems to depend on, ask.
+- `.worktreeinclude` copies the gitignored `Local.xcconfig` across; without that file the project doesn't
+  build. If it's missing in the worktree, copy it from the main checkout.
+- Run builds, tests and `swiftlint` from the worktree root. The first build there is slow: DerivedData is
+  keyed by project path.
+- Subagents must work in the worktree, not the main checkout: give them its absolute path.
+- Leave the worktree in place when done and report its path and branch. Never remove, merge or push it
+  unless asked.
+
 ## Agent workflow
 
-The `.claude/agents/` folder defines four subagents (YAML frontmatter, dispatchable by name):
+One agent plans, codes and tests in a single context; a separate `reviewer` subagent then looks with fresh
+eyes. Don't split the first three across subagents unless the user asks: each handoff costs a cold start and
+loses reasoning.
 
-- **Architect** — plan a feature, no code
-- **Implementer** — write the code per the plan
-- **Tester** — write Swift Testing unit tests
-- **Reviewer** — review the diff against project standards
-
-The chain is Architect → Implementer → Tester → Reviewer, looping back to Implementer for at most two
-rounds. `/work` §2 owns the handoff contracts — what each dispatch prompt must carry, since subagents start
-cold. [.claude/agents/README.md](.claude/agents/README.md) is a short map of the four files.
+- `.claude/guides/` — role guides, read at the step they cover: [planning](.claude/guides/planning.md),
+  [implementing](.claude/guides/implementing.md), [testing](.claude/guides/testing.md). They add
+  role-specific detail; the rules themselves live in this file.
+- `.claude/agents/reviewer.md` — the one subagent. Reports findings against project standards, fixes
+  nothing. Runs once; again only when a Critical finding was fixed.
 
 Slash commands live in `.claude/commands/`:
 
-- `/work <description>` — take a feature or bug through the whole chain: triages into a trivial / bug-fix /
-  feature lane, dispatches the subagents with explicit handoffs, runs the bounded review loop, and reports.
-  Runs straight through without stopping for approval. Never commits.
-- `/test [scope]` — the Tester → Reviewer tail on its own, for when code already exists and only needs
-  tests: writes them, then reviews them against the test conventions above.
+- `/work <description>` — a feature or bug end to end: gathers requirements and asks any open questions,
+  triages into a trivial / small-fix / full lane, works in a worktree, then plans, codes, tests and (full
+  lane) has it reviewed. Once the questions are answered it runs straight through. Never commits.
+- `/test [scope]` — writes tests for code that already exists, then has them reviewed.
 
 ## Skills
 
@@ -261,7 +289,7 @@ edited here):
 
 **This file wins on conflict.** The vendored skills are written for a generic project. These five
 disagreements are known; apply the resolution and don't re-litigate them per agent, per review or per turn.
-This section is the authority — the agent files link here instead of keeping their own copies.
+This section is the authority — the guides and agent file link here instead of keeping their own copies.
 
 | The skill says | This project | Why |
 | --- | --- | --- |

@@ -32,6 +32,9 @@
       "WebFetch(domain:swiftpackageindex.com)"
     ]
   },
+  "worktree": {
+    "baseRef": "head"
+  },
   "enabledPlugins": {
     "ios-simulator-skill@conorluddy": true,
     "ponytail@ponytail": true,

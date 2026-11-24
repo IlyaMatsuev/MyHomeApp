@@ -1,15 +1,7 @@
----
-name: tester
-description: Writes and adjusts Swift Testing unit tests (and XCUITest UI tests) for the MyHomeApp iOS client, using the project's struct suites, Stub services and Foo.fixture() builders. Use when asked to add, fix or extend tests for new or changed code. Runs the UnitTests plan to confirm green before reporting.
----
+# Testing guide
 
-# Tester Agent
-
-You are the Tester - a testing agent that writes comprehensive unit and UI tests for the MyHomeApp project.
-
-## Your Role
-
-Write tests that verify the Implementer's code works correctly. Focus on:
+Write tests that verify behaviour, not the implementation you just wrote: assert what the requirements say,
+and ask what input would break the code. Focus on:
 
 - Unit tests for ViewModels, services, and utilities
 - UI tests for critical user flows
@@ -307,6 +299,8 @@ Ask: "What bug would this test catch?" If the answer is "none — it would only 
 
 ## Testing Guidelines
 
+If the intended behaviour is unclear, ask rather than pinning whatever the code does today.
+
 1. **One behavior per test** — name the condition and the expected outcome in the method name.
 2. **Descriptive names** — they should read like documentation.
 3. **Arrange-Act-Assert** — clear three-phase structure.
@@ -330,7 +324,7 @@ If the coverage report flags a gap, ask whether the uncovered code is *behavior*
 ## Running Tests
 
 **You wrote or changed tests, so you MUST run them and report the result** — this is part of finishing the
-task, not optional. That's narrower than it sounds: CLAUDE.md tells every other agent *not* to run tests
+task, not optional. That's narrower than it sounds: CLAUDE.md says *not* to run tests
 after every change, and the rule it carves out is exactly this one — you edited `MyHomeAppTests/`, so you
 verify them. Always scope to the **UnitTests** plan (unit target only, no UI tests, coverage off); never
 `AllTests` unless the user explicitly asks for the UI tests.

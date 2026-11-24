@@ -1,15 +1,7 @@
----
-name: architect
-description: Plans a feature for the MyHomeApp iOS client and produces a file-by-file implementation plan that follows the project's MVVM + AppContainer conventions. Use when asked to design, plan, scope or break down a new screen, service, store or flow before any code is written. Writes no code.
----
+# Planning guide
 
-# Architect Agent
-
-You are the Architect - a software architect agent specialized in planning feature implementations for the MyHomeApp project.
-
-## Your Role
-
-Analyze feature requests and create detailed implementation plans that other agents (Implementer, Tester, Reviewer) will follow. You do NOT write code - you design the architecture and create actionable plans.
+How to plan a feature before writing it. Plan first, no code yet; whoever plans then implements, so the plan
+records decisions rather than instructing a stranger.
 
 ## Skills to use
 
@@ -17,8 +9,7 @@ Invoke these before writing the plan, in this order:
 
 1. **`ponytail:ponytail`** — plan the smallest change that fully solves the request. Check whether each
    proposed file needs to exist, whether an existing screen / service / store already covers it, and cut
-   any layer, option or flag nobody asked for. Name what you deliberately skipped in the plan's **Risks &
-   Mitigations** table so the Implementer doesn't add it back.
+   any layer, option or flag nobody asked for. Name what you deliberately skipped in the plan.
 2. **`swift-architecture-skill`** — read `references/mvvm.md` for structure, state ownership, async and
    testing detail when a feature's shape isn't obvious from the nearest existing screen. The repo's copy is
    trimmed to MVVM; the architecture here is settled, so there is nothing to select.
@@ -35,7 +26,7 @@ existing structure.
 
 The toolchain, folder layout, architecture and coding rules are in [CLAUDE.md](../../CLAUDE.md). Read its
 **Toolchain & targets**, **Project structure**, **Architecture** and **Coding rules** sections — they are
-the authority and there is no second copy here. [implementer.md](implementer.md#project-patterns) shows the
+the authority and there is no second copy here. [implementing.md](implementing.md#project-patterns) shows the
 same patterns as working code (loader/screen, router, service, draft); skim it when you need the exact
 shape you're planning toward.
 
@@ -55,7 +46,8 @@ Feature-local models live under that feature (`Core/Devices/Models/`, or next to
 When given a feature request:
 
 1. **Understand Requirements**
-    - Clarify ambiguous requirements
+    - Start from the settled requirements; don't reopen them
+    - If something still open would change the design, stop and ask the user, with a recommended answer
     - Identify user-facing vs internal changes
     - Determine scope boundaries (which screens / flows are touched)
 
@@ -71,88 +63,26 @@ When given a feature request:
     - Design service interfaces (protocols + DTOs)
 
 4. **Task Breakdown**
-    - Create ordered, actionable tasks
+    - Create ordered tasks
     - Specify file paths for each task
     - Note dependencies between tasks
-    - Estimate complexity (S/M/L)
 
 5. **Risk Assessment**
     - Identify potential issues (concurrency, main-actor isolation, lifecycle)
     - Note backward compatibility concerns (min iOS version, persisted data)
     - Suggest rollback strategies
 
-## Output Format
+## Output
 
-Structure your plans as follows:
+Short and inline; scale it to the change and leave out any part with nothing to say:
 
-````markdown
-# Feature: [Feature Name]
-
-## Overview
-
-[2-3 sentence summary of the feature]
-
-## Requirements
-
-- [ ] Requirement 1
-- [ ] Requirement 2
-
-## Affected Screens / Folders
-
-| Area              | Changes                       |
-| ----------------- | ----------------------------- |
-| Screens/Devices   | Add new view + view model     |
-| Core/Networking   | Add endpoint                  |
-
-## New Files
-
-- `MyHomeApp/Screens/Devices/DevicePairingView.swift` - [purpose]
-- `MyHomeApp/Screens/Devices/DevicePairingViewModel.swift` - [purpose]
-
-## Model / ViewModel Contracts
-
-```swift
-struct PairableDevice: Identifiable, Equatable {
-    let id: UUID
-    let name: String
-    let kind: DeviceKind
-}
-
-@Observable
-final class DevicePairingViewModel {
-    private(set) var state: ViewState<[PairableDevice]> = .idle
-    func startDiscovery() async { /* ... */ }
-}
-```
-
-## Navigation / UX
-
-- Triggered from `DevicesView` toolbar `+` button
-- Presented as a `.sheet`
-- Dismissed on success and refreshes the devices list
-
-## Networking / Persistence Changes
-
-[Endpoints touched, payloads, persistence model changes, migrations if any]
-
-## Implementation Tasks
-
-1. [ ] **Task name** (Size: S/M/L)
-    - File: `MyHomeApp/path/to/File.swift`
-    - Description: What to implement
-    - Dependencies: Task numbers this depends on
-
-## Testing Requirements
-
-- Unit tests for: [list view models / services]
-- UI tests for: [list flows, if any]
-
-## Risks & Mitigations
-
-| Risk             | Mitigation    |
-| ---------------- | ------------- |
-| Risk description | How to handle |
-````
+- **Approach** — two or three sentences, and what you deliberately skipped.
+- **Files** — new and changed, one line of purpose each, in implementation order.
+- **Contracts** — signatures for new models, view models and services, with their actor isolation.
+- **UX** — how the user gets in and out, plus the empty, loading and error states.
+- **Wire / persistence** — endpoints, payloads, and what happens to data already saved on a device.
+- **Tests** — the behaviours worth pinning.
+- **Risks** — only real ones, with what you'll do about each.
 
 ## Guidelines
 
