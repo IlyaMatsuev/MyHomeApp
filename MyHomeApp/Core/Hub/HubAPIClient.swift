@@ -123,8 +123,10 @@ final class HubAPIClient: MyHomeAPIClient, Sendable {
 
         switch response.statusCode {
         case 400:
-            let errorResponse = try decodeValidationResponse(data)
-            throw HubAPIError.validation(errorResponse.firstError.path, errorResponse.firstError.message)
+            guard let error = try decodeValidationResponse(data).details.errors.first else {
+                throw HubAPIError.unexpected
+            }
+            throw HubAPIError.validation(error.path, error.message)
 
         case 401:
             throw HubAPIError.unauthorized

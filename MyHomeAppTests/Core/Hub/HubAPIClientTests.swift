@@ -216,6 +216,19 @@ struct HubAPIClientTests {
 
     // MARK: - status code mapping
 
+    @Test(arguments: [
+        (#"[{"message": "Name is required", "path": "name"}]"#, HubAPIError.validation("name", "Name is required")),
+        ("[]", HubAPIError.unexpected)
+    ])
+    func send400ThrowsFirstValidationErrorIfAny(errors: String, expected: HubAPIError) async {
+        let body = Data(#"{"messages": [], "details": {"errors": \#(errors)}, "statusCode": 400}"#.utf8)
+        let client = Self.makeClient { Self.response(for: $0, status: 400, body: body) }
+
+        await #expect(throws: expected) {
+            let _: SamplePayload = try await client.send(.get("/devices"))
+        }
+    }
+
     @Test
     func send401ThrowsUnauthorized() async {
         let client = Self.makeClient { request in
