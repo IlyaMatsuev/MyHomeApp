@@ -1,0 +1,96 @@
+name: Validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new PR commit cancels the outdated run. Pushes to main each get their own group: the change check
+# below only looks at that push's commits, so a cancelled run would leave its changes untested.
+concurrency:
+  group: validation-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      app_changed: ${{ steps.changes.outputs.app_changed }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Not a `paths` filter on the trigger: a required check that never starts blocks the PR forever,
+      # while a skipped job counts as passed.
+      - name: Check whether the app changed
+        id: changes
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          changed=true
+          # No usable base (manual run, new branch, force push): test anyway.
+          if [ -n "$BASE" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            files=$(git diff --name-only "$BASE" HEAD)
+            # Anything not known to be irrelevant counts as an app change.
+            if ! grep -qvE '^(\.claude/|docs/|scripts/|\.github/workflows/release\.yaml$|LICENSE$|docker-compose\.yaml$|\.gitignore$|\.claudeignore$|\.worktreeinclude$)|\.md$' <<< "$files"; then
+              changed=false
+            fi
+          fi
+          echo "app_changed=$changed" >> "$GITHUB_OUTPUT"
+          echo "App changed: $changed"
+
+      # Same version as the Xcode build plugin, so CI and local builds can't disagree.
+      - name: SwiftLint
+        run: |
+          set -euo pipefail
+          version=$(jq -r '.pins[] | select(.identity == "swiftlint").state.version' \
+            MyHomeApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved)
+          docker run --rm -v "$PWD:/repo" -w /repo "ghcr.io/realm/swiftlint:$version" \
+            swiftlint lint --reporter github-actions-logging
+
+  test:
+    name: Unit tests
+    needs: lint
+    if: needs.lint.outputs.app_changed == 'true'
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.6'
+
+      - name: Create stub Local.xcconfig
+        run: cp Local.xcconfig.example Local.xcconfig
+
+      - uses: actions/cache@v6
+        with:
+          path: SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved') }}
+
+      # Code signing stays on (ad hoc on the simulator): the Keychain needs the entitlements it adds.
+      # iPhone 17 because the runner image has no iPhone 13 mini.
+      - name: Run unit tests
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -scheme MyHomeApp \
+            -testPlan UnitTests \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' \
+            -clonedSourcePackagesDirPath SourcePackages \
+            -onlyUsePackageVersionsFromResolvedFile \
+            -skipPackagePluginValidation \
+            -skipMacroValidation | xcbeautify --renderer github-actions
