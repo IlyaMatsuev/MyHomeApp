@@ -17,6 +17,12 @@ final class TestURLProtocol: URLProtocol, @unchecked Sendable {
         }
         do {
             let (response, data) = try handler(request)
+            if response.statusCode == 302, let location = response.value(forHTTPHeaderField: "Location") {
+                var redirected = request
+                redirected.url = URL(string: location)
+                client?.urlProtocol(self, wasRedirectedTo: redirected, redirectResponse: response)
+                return
+            }
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
             client?.urlProtocol(self, didLoad: data)
             client?.urlProtocolDidFinishLoading(self)

@@ -13,6 +13,10 @@ struct HubAPIClientTests {
     }
 
     private nonisolated static let server = Server(.http, "hub.local:8080", label: "Test Hub")
+    private nonisolated static let proxiedServer = server.withHeaders(
+        ServerHeader(name: "X-Proxy-Key", value: "s3cr3t"),
+        ServerHeader(name: "X-Tenant", value: "home")
+    )
     private nonisolated static let token = AuthToken.fixture(accessToken: "test-token")
 
     private static func makeClient(
@@ -435,6 +439,108 @@ struct HubAPIClientTests {
 
         let request = try #require(captured.value)
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer new")
+    }
+
+    // MARK: - custom headers
+
+    @Test(arguments: [true, false])
+    func sendAttachesCurrentServerHeaders(protected: Bool) async throws {
+        let captured = CapturedRequest()
+        let client = Self.makeClient(server: Self.proxiedServer) { request in
+            captured.value = request
+            return Self.okResponse(for: request)
+        }
+
+        try await client.send(.get("/devices", protected: protected))
+
+        let request = try #require(captured.value)
+        #expect(request.value(forHTTPHeaderField: "X-Proxy-Key") == "s3cr3t")
+        #expect(request.value(forHTTPHeaderField: "X-Tenant") == "home")
+    }
+
+    @Test(arguments: [true, false])
+    func sendToServerAttachesTargetHeadersInsteadOfCurrentServerHeaders(protected: Bool) async throws {
+        let captured = CapturedRequest()
+        let client = Self.makeClient(server: Self.proxiedServer) { request in
+            captured.value = request
+            return Self.okResponse(for: request)
+        }
+        let target = Server(.https, "other.host:9000").withHeaders(ServerHeader(name: "X-Target-Key", value: "target"))
+
+        try await client.send(.get("/info", protected: protected), to: target)
+
+        let request = try #require(captured.value)
+        #expect(request.value(forHTTPHeaderField: "X-Target-Key") == "target")
+        #expect(request.value(forHTTPHeaderField: "X-Proxy-Key") == nil)
+    }
+
+    @Test
+    func retryAfterRefreshAttachesServerHeadersAgain() async throws {
+        let captured = CapturedRequest()
+        let calls = RequestCounter()
+        let context = HubAPIContext()
+        context.attach(
+            auth: StubAuthProvider(sessionToken: Self.token) { true },
+            servers: StubServerProvider(selectedServer: Self.proxiedServer)
+        )
+        let client = Self.makeClient(context: context) { request in
+            calls.append(request)
+            captured.value = request
+            return Self.response(for: request, status: calls.count == 1 ? 401 : 200)
+        }
+
+        try await client.send(.get("/devices"))
+
+        #expect(calls.count == 2)
+        let retry = try #require(captured.value)
+        #expect(retry.value(forHTTPHeaderField: "X-Proxy-Key") == "s3cr3t")
+    }
+
+    @Test
+    func appHeadersWinOverServerHeaders() async throws {
+        let captured = CapturedRequest()
+        let server = Self.server.withHeaders(
+            ServerHeader(name: "authorization", value: "custom"),
+            ServerHeader(name: "ACCEPT", value: "custom"),
+            ServerHeader(name: "content-type", value: "custom")
+        )
+        let client = Self.makeClient(server: server) { request in
+            captured.value = request
+            return Self.okResponse(for: request)
+        }
+
+        try await client.send(try .post("/devices", SamplePayload(name: "lamp")))
+
+        let request = try #require(captured.value)
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer test-token")
+        #expect(request.value(forHTTPHeaderField: "Accept") == "application/json")
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+    }
+
+    @Test
+    func crossHostRedirectDropsServerHeaders() async throws {
+        let captured = CapturedRequest()
+        let client = Self.makeClient(server: Self.proxiedServer) { request in
+            guard request.url?.host() == "hub.local" else {
+                captured.value = request
+                return Self.okResponse(for: request)
+            }
+            let url = try #require(request.url)
+            let redirect = HTTPURLResponse(
+                url: url,
+                statusCode: 302,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Location": "http://elsewhere.example.com/devices"]
+            )
+            return (try #require(redirect), Data())
+        }
+
+        try await client.send(.get("/devices"))
+
+        let redirected = try #require(captured.value)
+        #expect(redirected.url?.host() == "elsewhere.example.com")
+        #expect(redirected.value(forHTTPHeaderField: "X-Proxy-Key") == nil)
+        #expect(redirected.value(forHTTPHeaderField: "X-Tenant") == nil)
     }
 
     // MARK: - transport errors

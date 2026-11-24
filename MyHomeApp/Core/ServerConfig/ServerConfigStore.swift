@@ -58,9 +58,7 @@ final class ServerConfigStore: ServerProvider {
         } else {
             try persistence.save(servers)
             state = .configured(servers)
-            if selectedServer.map({ current in !servers.contains { $0.id == current.id } }) ?? true {
-                selectedServer = servers.first
-            }
+            selectedServer = servers.first { $0.id == selectedServer?.id } ?? servers.first
         }
     }
 
