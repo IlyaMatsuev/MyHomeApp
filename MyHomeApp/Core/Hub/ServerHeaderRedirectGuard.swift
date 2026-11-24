@@ -1,13 +1,13 @@
 import Foundation
 
-/// URLSession drops `Authorization` on redirects but forwards every other header, even to another host,
-/// and a server's custom headers are credentials too.
+/// This is a security measure to prevent sharing the custom headers if the request is being redirected to another domain, when setting up a server
+/// By default URLSession does it for `Authorization` header
 final class ServerHeaderRedirectGuard: NSObject, URLSessionTaskDelegate {
     private let host: String?
     private let headerNames: [String]
 
     init(server: Server) {
-        host = server.baseURL?.host()?.lowercased()
+        host = Self.formatHost(url: server.baseURL)
         headerNames = server.headers.map(\.name)
     }
 
@@ -19,11 +19,15 @@ final class ServerHeaderRedirectGuard: NSObject, URLSessionTaskDelegate {
         completionHandler: @escaping @Sendable (URLRequest?) -> Void
     ) {
         var request = request
-        if request.url?.host()?.lowercased() != host {
+        if Self.formatHost(url: request.url) != host {
             for name in headerNames {
                 request.setValue(nil, forHTTPHeaderField: name)
             }
         }
         completionHandler(request)
+    }
+
+    static func formatHost(url: URL?) -> String? {
+        url?.host()?.lowercased()
     }
 }

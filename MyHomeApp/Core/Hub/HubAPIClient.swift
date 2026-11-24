@@ -87,7 +87,6 @@ final class HubAPIClient: MyHomeAPIClient, Sendable {
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = request.method.rawValue
 
-        // First, so the app's own headers below always win.
         for header in headers {
             urlRequest.setValue(header.value, forHTTPHeaderField: header.name)
         }
