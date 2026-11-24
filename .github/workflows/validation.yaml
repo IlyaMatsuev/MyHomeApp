@@ -40,9 +40,11 @@ jobs:
           changed=true
           # No usable base (manual run, new branch, force push): test anyway.
           if [ -n "$BASE" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            files=$(git diff --name-only "$BASE" HEAD)
-            # Anything not known to be irrelevant counts as an app change.
-            if ! grep -qvE '^(\.claude/|docs/|scripts/|\.github/workflows/release\.yaml$|LICENSE$|docker-compose\.yaml$|\.gitignore$|\.claudeignore$|\.worktreeinclude$)|\.md$' <<< "$files"; then
+            # --no-renames: a file moved out of the app must still list its old path.
+            files=$(git diff --no-renames --name-only "$BASE" HEAD)
+            # Anything not known to be irrelevant counts as an app change. The UnitTests plan doesn't build
+            # MyHomeAppUITests.
+            if ! grep -qvE '^(\.claude/|docs/|scripts/|MyHomeAppUITests/|\.github/workflows/release\.yaml$|LICENSE$|docker-compose\.yaml$|\.gitignore$|\.claudeignore$|\.worktreeinclude$)|\.md$' <<< "$files"; then
               changed=false
             fi
           fi
