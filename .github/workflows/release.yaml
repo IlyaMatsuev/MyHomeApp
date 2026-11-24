@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
         with:
@@ -36,7 +36,7 @@ jobs:
 
       - uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '26.6'
 
       - name: Create stub Local.xcconfig
         run: cp Local.xcconfig.example Local.xcconfig
@@ -62,7 +62,7 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             DEVELOPMENT_TEAM="" | xcbeautify --renderer github-actions
-        # xcbeautify is preinstalled on macos-15 runners; if it disappears, drop the pipe.
+        # xcbeautify is preinstalled on macos-26 runners; if it disappears, drop the pipe.
 
       - name: Package IPA
         id: pkg
@@ -74,6 +74,9 @@ jobs:
           zip -qr MyHomeApp.ipa Payload
           SIZE=$(stat -f%z MyHomeApp.ipa)
           echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+          # Read from the built app so it can't drift from the deployment target.
+          MIN_OS=$(plutil -extract MinimumOSVersion raw Payload/MyHomeApp.app/Info.plist)
+          echo "min_os=$MIN_OS" >> "$GITHUB_OUTPUT"
           ls -lh MyHomeApp.ipa
 
       - name: Create GitHub release
@@ -91,6 +94,7 @@ jobs:
           VERSION: ${{ inputs.version }}
           NOTES: ${{ inputs.release_notes }}
           SIZE: ${{ steps.pkg.outputs.size }}
+          MIN_OS: ${{ steps.pkg.outputs.min_os }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -101,13 +105,14 @@ jobs:
              --arg url "$DOWNLOAD_URL" \
              --arg notes "$NOTES" \
              --argjson size "$SIZE" \
+             --arg minOS "$MIN_OS" \
              '.apps[0].versions |= ([{
                 version: $version,
                 date: $date,
                 localizedDescription: $notes,
                 downloadURL: $url,
                 size: $size,
-                minOSVersion: "18.6"
+                minOSVersion: $minOS
              }] + .)
              | .apps[0].version            = $version
              | .apps[0].versionDate        = $date
