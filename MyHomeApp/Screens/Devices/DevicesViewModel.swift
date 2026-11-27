@@ -159,9 +159,8 @@ final class DevicesViewModel {
     }
 
     private func fetchDevices() async throws {
-        // TODO: Need to query all devices, or implement lazy loading or something
-        let devicesPage = try await service.fetchDevices()
-        roomGroups = Self.group(devicesPage.items)
+        let devices = try await service.fetchDevices()
+        roomGroups = Self.group(devices)
         rollbackValues = [:]
         state = .loaded
     }

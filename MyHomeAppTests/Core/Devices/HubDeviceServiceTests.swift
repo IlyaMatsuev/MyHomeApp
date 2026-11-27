@@ -29,19 +29,19 @@ struct HubDeviceServiceTests {
     }
 
     @Test
-    func fetchDevicesAsksTheHubForDeviceConfigs() async throws {
+    func fetchDevicesAsksTheHubForAllDevicesWithConfigs() async throws {
         client.response = .data(Self.encodeEmptyPage())
 
         _ = try await service.fetchDevices()
 
         let request = try #require(client.sentRequests.first)
-        #expect(request.query == ["pageSize": "20", "includeConfig": "true"])
+        #expect(request.query == ["all": "true", "includeConfig": "true"])
     }
 
     // MARK: - fetchDevices() — success
 
     @Test
-    func fetchDevicesReturnsDecodedPage() async throws {
+    func fetchDevicesReturnsThePageItems() async throws {
         let lamp = Device.fixture(name: "Lamp")
             .inRoom(.livingRoom)
             .withConfig(MockDeviceConfigs.tuyaLED)
@@ -60,7 +60,7 @@ struct HubDeviceServiceTests {
 
         let result = try await service.fetchDevices()
 
-        #expect(result == page)
+        #expect(result == [lamp, speaker])
     }
 
     // MARK: - fetchDevices() — failure paths

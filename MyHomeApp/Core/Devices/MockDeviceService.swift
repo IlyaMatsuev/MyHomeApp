@@ -137,15 +137,9 @@ struct MockDeviceService: DeviceService {
         self.operationDelay = operationDelay
     }
 
-    func fetchDevices() async throws -> Page<Device> {
+    func fetchDevices() async throws -> [Device] {
         try await Task.sleep(for: operationDelay)
-        return Page(
-            items: Self.allDevices,
-            page: 1,
-            pageSize: 10,
-            totalPages: 1,
-            totalItems: 5
-        )
+        return Self.allDevices
     }
 
     func updateControls(deviceId: String, controls: [String: AnyCodable]) async throws -> Device {

@@ -3,9 +3,7 @@ import AnyCodable
 @testable import MyHomeApp
 
 final class StubDeviceService: DeviceService, @unchecked Sendable {
-    private(set) var fetchDevicesResult: Result<Page<Device>, Error> = .success(
-        Page(items: [], page: 1, pageSize: 0, totalPages: 1, totalItems: 0)
-    )
+    private(set) var fetchDevicesResult: Result<[Device], Error> = .success([])
     var updateControlsResult: (String) -> Result<Device, Error> = { deviceId in
         .failure(MockDeviceService.DeviceNotFoundError(deviceId: deviceId))
     }
@@ -23,7 +21,7 @@ final class StubDeviceService: DeviceService, @unchecked Sendable {
     private(set) var sendCommandCalls: [(deviceId: String, command: [String: AnyCodable])] = []
     private(set) var deleteDeviceCalls: [String] = []
 
-    func fetchDevices() async throws -> Page<Device> {
+    func fetchDevices() async throws -> [Device] {
         fetchDevicesCallCount += 1
         return try fetchDevicesResult.get()
     }
@@ -49,15 +47,7 @@ final class StubDeviceService: DeviceService, @unchecked Sendable {
     }
 
     func setDevices(_ devices: [Device]) {
-        fetchDevicesResult = .success(
-            Page(
-                items: devices,
-                page: 1,
-                pageSize: devices.count,
-                totalPages: 1,
-                totalItems: devices.count
-            )
-        )
+        fetchDevicesResult = .success(devices)
     }
 
     func setDevicesError(_ error: Error) {

@@ -12,11 +12,11 @@ struct HubDeviceService: DeviceService {
         self.client = client
     }
 
-    // TODO: Need to figure out how to handle pagination
     // TODO: Handle errors (401, 500)
-    func fetchDevices() async throws -> Page<Device> {
-        let request = HubRequest.get("/devices", ["pageSize": "20", "includeConfig": "true"])
-        return try await client.send(request)
+    func fetchDevices() async throws -> [Device] {
+        let request = HubRequest.get("/devices", ["all": "true", "includeConfig": "true"])
+        let page: Page<Device> = try await client.send(request)
+        return page.items
     }
 
     // TODO: Handle errors: 400, 401, 404, 500
