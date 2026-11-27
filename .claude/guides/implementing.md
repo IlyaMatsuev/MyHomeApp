@@ -261,7 +261,7 @@ struct DevicesDestinationView: View {
 ```swift
 // Core/Devices/DeviceService.swift
 protocol DeviceService: Sendable {
-    func fetchDevices() async throws -> Page<Device>
+    func fetchDevices() async throws -> [Device]
     func updateControls(deviceId: String, controls: [String: AnyCodable]) async throws -> Device
 }
 ```
@@ -275,8 +275,8 @@ struct HubDeviceService: DeviceService {
         self.client = client
     }
 
-    func fetchDevices() async throws -> Page<Device> {
-        try await client.send(HubRequest.get("/devices", ["pageSize": "20"]))
+    func fetchDevices() async throws -> [Device] {
+        try await client.sendAllPages(HubRequest.get("/devices", ["includeConfig": "true"]))
     }
     // ...
 }

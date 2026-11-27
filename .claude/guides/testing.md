@@ -127,12 +127,10 @@ Same pattern as before, untouched by the framework swap:
 @testable import MyHomeApp
 
 final class StubDeviceService: DeviceService, @unchecked Sendable {
-    var fetchDevicesResult: Result<Page<Device>, Error> = .success(
-        Page(items: [], page: 1, pageSize: 0, totalPages: 1, totalItems: 0)
-    )
+    var fetchDevicesResult: Result<[Device], Error> = .success([])
     private(set) var fetchDevicesCallCount = 0
 
-    func fetchDevices() async throws -> Page<Device> {
+    func fetchDevices() async throws -> [Device] {
         fetchDevicesCallCount += 1
         return try fetchDevicesResult.get()
     }
