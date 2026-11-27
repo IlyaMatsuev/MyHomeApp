@@ -108,8 +108,12 @@ final class ScenariosViewModel {
     }
 
     private func reload(keepingContentOnFailure: Bool) async {
-        async let fetchedDevices = deviceService.fetchDevices()
+        async let devicesReload: Void = reloadDevices()
+        await reloadScenarios(keepingContentOnFailure: keepingContentOnFailure)
+        await devicesReload
+    }
 
+    private func reloadScenarios(keepingContentOnFailure: Bool) async {
         do {
             let page = try await service.fetchScenarios()
             scenarios = page.items.sorted()
@@ -122,9 +126,11 @@ final class ScenariosViewModel {
                 state = .failed(ScenarioError.text(for: error))
             }
         }
+    }
 
+    private func reloadDevices() async {
         do {
-            devices = try await fetchedDevices.sorted()
+            devices = try await deviceService.fetchDevices().sorted()
         } catch {
             devices = []
             Self.logger.error("Failed to load devices for the scenario editor: \(error.localizedDescription)")
