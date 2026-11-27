@@ -14,8 +14,9 @@ struct HubDeviceService: DeviceService {
 
     // TODO: Handle errors (401, 500)
     func fetchDevices() async throws -> [Device] {
-        let request = HubRequest.get("/devices", ["includeConfig": "true"])
-        return try await client.sendAllPages(request)
+        let request = HubRequest.get("/devices", ["all": "true", "includeConfig": "true"])
+        let page: Page<Device> = try await client.send(request)
+        return page.items
     }
 
     // TODO: Handle errors: 400, 401, 404, 500

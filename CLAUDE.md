@@ -94,9 +94,9 @@ MVVM with SwiftUI, one composition root:
 - **ViewModels** are `@Observable` `@MainActor` classes that own screen state. Every dependency comes
   through `init`, with no defaults; only `AppContainer` (and tests, with stubs) construct them.
 - **Services** are stateless: a `protocol` (`DeviceService`) + `HubDeviceService` for production +
-  `MockDeviceService` for previews. Tests use `Stub*` types from `MyHomeAppTests/Mocks/`. A paginated
-  hub list goes through `client.sendAllPages(_:)` (`Core/Hub/MyHomeAPIClient+Pagination.swift`), which
-  walks every page at the hub's maximum page size and returns plain items — don't hand-roll `pageSize`
+  `MockDeviceService` for previews. Tests use `Stub*` types from `MyHomeAppTests/Mocks/`. To fetch a
+  whole paginated hub list, send `all=true`: the hub then returns every match in a single page, and the
+  service returns its plain items — don't hand-roll `pageSize` or walk pages
   (`HubScenarioService.fetchScenarios()` hasn't moved over yet).
 - **Stores** are `@Observable @MainActor` state that outlives a screen (`SessionStore`,
   `ServerConfigStore`, `RegistrationStore`, `SavedColorsStore`, `ToastStore`). A feature gets a store

@@ -276,7 +276,8 @@ struct HubDeviceService: DeviceService {
     }
 
     func fetchDevices() async throws -> [Device] {
-        try await client.sendAllPages(HubRequest.get("/devices", ["includeConfig": "true"]))
+        let page: Page<Device> = try await client.send(HubRequest.get("/devices", ["all": "true"]))
+        return page.items
     }
     // ...
 }
