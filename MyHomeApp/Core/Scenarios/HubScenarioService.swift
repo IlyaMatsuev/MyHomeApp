@@ -9,10 +9,10 @@ struct HubScenarioService: ScenarioService {
         self.client = client
     }
 
-    // TODO: Need to figure out how to handle pagination
-    func fetchScenarios() async throws -> Page<Scenario> {
-        let request = HubRequest.get("/scenarios", ["pageSize": "20", "includeInactive": "true"])
-        return try await client.send(request)
+    func fetchScenarios() async throws -> [Scenario] {
+        let request = HubRequest.get("/scenarios", ["all": "true", "includeInactive": "true"])
+        let page: Page<Scenario> = try await client.send(request)
+        return page.items
     }
 
     func createScenario(payload: ScenarioPayload) async throws -> Scenario {
