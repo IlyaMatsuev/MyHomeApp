@@ -24,28 +24,48 @@ struct HubScenarioServiceTests {
         let request = try #require(client.sentRequests.first)
         #expect(request.method == .get)
         #expect(request.path == "/scenarios")
-        #expect(
-            request.query == ["pageSize": "20", "includeInactive": "true"],
-            "The hub filters inactive scenarios out unless asked for them"
-        )
         #expect(request.protected == true)
         #expect(request.body == nil)
     }
 
     @Test
-    func fetchScenariosReturnsDecodedPage() async throws {
-        let page = Page(
-            items: [Scenario.fixture(name: "Warm light on").build()],
-            page: 1,
-            pageSize: 20,
-            totalPages: 1,
-            totalItems: 1
+    func fetchScenariosAsksTheHubForAllScenariosIncludingInactive() async throws {
+        client.response = .data(try Self.encode(Self.emptyPage))
+
+        _ = try await service.fetchScenarios()
+
+        let request = try #require(client.sentRequests.first)
+        #expect(
+            request.query == ["all": "true", "includeInactive": "true"],
+            "The hub pages its list and filters inactive scenarios out unless asked otherwise"
         )
+    }
+
+    @Test
+    func fetchScenariosReturnsThePageItems() async throws {
+        let warmLight = Scenario.fixture(name: "Warm light on").build()
+        let nightOff = Scenario.fixture(name: "Everything off at night", active: false).build()
+        let page = Page(items: [warmLight, nightOff], page: 1, pageSize: 2, totalPages: 1, totalItems: 2)
         client.response = .data(try Self.encode(page))
 
         let result = try await service.fetchScenarios()
 
-        #expect(result == page)
+        #expect(result == [warmLight, nightOff])
+    }
+
+    @Test
+    func fetchScenariosReturnsTwoPagesWorthOfScenariosFromOneRequest() async throws {
+        // One past the hub's MAX_PAGE_SIZE of 50, so any paged request would need a second page.
+        let scenarios = (1...51).map { Scenario.fixture(name: "Scenario \($0)").build() }
+        let page = Page(items: scenarios, page: 1, pageSize: 51, totalPages: 1, totalItems: 51)
+        client.response = .data(try Self.encode(page))
+
+        let result = try await service.fetchScenarios()
+
+        #expect(client.sentRequests.count == 1)
+        let request = try #require(client.sentRequests.first)
+        #expect(request.query["all"] == "true", "Without all=true the hub caps the response at one page")
+        #expect(result == scenarios)
     }
 
     @Test

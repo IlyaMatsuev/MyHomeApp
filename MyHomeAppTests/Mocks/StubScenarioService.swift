@@ -6,9 +6,7 @@ final class StubScenarioService: ScenarioService, @unchecked Sendable {
         case notConfigured
     }
 
-    private(set) var fetchScenariosResult: Result<Page<Scenario>, Error> = .success(
-        Page(items: [], page: 1, pageSize: 0, totalPages: 1, totalItems: 0)
-    )
+    private(set) var fetchScenariosResult: Result<[Scenario], Error> = .success([])
 
     var createScenarioResult: Result<Scenario, Error> = .failure(StubError.notConfigured)
     var updateScenarioResult: Result<Scenario, Error> = .failure(StubError.notConfigured)
@@ -21,7 +19,7 @@ final class StubScenarioService: ScenarioService, @unchecked Sendable {
     private(set) var setActiveCalls: [(scenarioId: String, active: Bool)] = []
     private(set) var deletedScenarioIds: [String] = []
 
-    func fetchScenarios() async throws -> Page<Scenario> {
+    func fetchScenarios() async throws -> [Scenario] {
         fetchScenariosCallCount += 1
         return try fetchScenariosResult.get()
     }
@@ -49,15 +47,7 @@ final class StubScenarioService: ScenarioService, @unchecked Sendable {
     }
 
     func setScenarios(_ scenarios: [Scenario]) {
-        fetchScenariosResult = .success(
-            Page(
-                items: scenarios,
-                page: 1,
-                pageSize: scenarios.count,
-                totalPages: 1,
-                totalItems: scenarios.count
-            )
-        )
+        fetchScenariosResult = .success(scenarios)
     }
 
     func setScenariosError(_ error: Error) {

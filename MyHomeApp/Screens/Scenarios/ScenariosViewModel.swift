@@ -115,8 +115,7 @@ final class ScenariosViewModel {
 
     private func reloadScenarios(keepingContentOnFailure: Bool) async {
         do {
-            let page = try await service.fetchScenarios()
-            scenarios = page.items.sorted()
+            scenarios = try await service.fetchScenarios().sorted()
             state = .loaded
         } catch {
             if keepingContentOnFailure {

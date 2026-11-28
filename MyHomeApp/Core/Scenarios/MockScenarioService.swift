@@ -66,16 +66,9 @@ struct MockScenarioService: ScenarioService {
         self.operationDelay = operationDelay
     }
 
-    func fetchScenarios() async throws -> Page<Scenario> {
+    func fetchScenarios() async throws -> [Scenario] {
         try await Task.sleep(for: operationDelay)
-        let scenarios = Self.allScenarios
-        return Page(
-            items: scenarios,
-            page: 1,
-            pageSize: 20,
-            totalPages: 1,
-            totalItems: scenarios.count
-        )
+        return Self.allScenarios
     }
 
     func createScenario(payload: ScenarioPayload) async throws -> Scenario {
